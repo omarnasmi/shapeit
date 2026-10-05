@@ -1,469 +1,295 @@
-# shapeit
+# ShapeIt
 
-## 1. Présentation du projet
+ShapeIt est une bibliothèque Python développée dans le cadre de notre projet de M1 Informatique ILSEN.
 
-L'objectif du projet est de développer une **bibliothèque Python de calculs géométriques en 2D** permettant de manipuler différentes formes géométriques et d'effectuer des calculs sur celles-ci.
+L'objectif du projet est de concevoir notre propre bibliothèque permettant de représenter, manipuler, analyser et visualiser des graphes.
 
-La bibliothèque prendra progressivement en charge plusieurs formes :
+Le cœur de la bibliothèque est développé par notre équipe. Nous n'utilisons donc pas de bibliothèque comme NetworkX pour implémenter directement les fonctionnalités principales du projet.
 
-* `Point`
-* `Line`
-* `Circle`
-* `Rectangle`
-* `Triangle`
+## Objectifs du projet
 
-Les principales fonctionnalités prévues sont :
+La bibliothèque devra progressivement permettre de :
 
-* création de formes ;
-* modification des formes ;
-* mise à l'échelle (`Scale`) ;
-* suppression de formes ;
-* calcul du périmètre ;
-* calcul de la surface ;
-* calcul d'intersections ;
-* représentation graphique des formes avec **Matplotlib**.
+- créer et manipuler des graphes ;
+- ajouter, supprimer et modifier des nœuds et des arêtes ;
+- associer des caractéristiques aux nœuds et aux arêtes ;
+- récupérer des informations sur la structure d'un graphe ;
+- appliquer différents algorithmes de graphes ;
+- visualiser les graphes ;
+- exporter les représentations obtenues ;
+- convertir les données vers des formats compatibles avec d'autres outils scientifiques ;
+- proposer une bibliothèque Python facilement installable et réutilisable.
 
-Le projet est volontairement conçu de manière **simple et évolutive**. De nouvelles fonctionnalités pourront être ajoutées au cours des différents sprints en fonction des besoins définis par le Product Owner.
+## Fonctionnalités prévues
 
-L'objectif est également de mettre en pratique le fonctionnement d'une équipe utilisant **Scrum**, notamment la gestion d'un Product Backlog, la planification des sprints, le suivi des tâches, les revues de sprint et les rétrospectives.
+### Manipulation des graphes
 
----
+La bibliothèque devra permettre de :
 
-## 2. Objectifs
+- créer un graphe ;
+- ajouter et supprimer des nœuds ;
+- ajouter et supprimer des arêtes ;
+- récupérer les nœuds et les arêtes ;
+- récupérer les voisins d'un nœud ;
+- calculer le degré d'un nœud.
 
-Les objectifs du projet sont :
+Dans les versions suivantes, nous étudierons également la gestion de graphes :
 
-* développer une bibliothèque géométrique simple et réutilisable ;
-* appliquer les principes de la programmation orientée objet ;
-* mettre en place des tests automatisés ;
-* utiliser Git et GitHub pour le travail collaboratif ;
-* utiliser Linear pour gérer le backlog et les sprints ;
-* pratiquer Scrum dans le cadre d'un projet de développement logiciel ;
-* produire une documentation claire du projet.
+- orientés ;
+- pondérés ;
+- signés ;
+- hétérogènes.
 
----
+### Analyse
 
-## 3. Stack technique
+Plusieurs informations topologiques pourront être calculées, par exemple :
 
-| Technologie    | Utilisation                           |
-| -------------- | ------------------------------------- |
-| **Python 3**   | Langage de programmation              |
-| **Matplotlib** | Représentation graphique des formes   |
-| **Pytest**     | Tests unitaires                       |
-| **Git**        | Gestion des versions                  |
-| **GitHub**     | Hébergement du dépôt et collaboration |
-| **Linear**     | Gestion du backlog et des sprints     |
+- nombre de nœuds ;
+- nombre d'arêtes ;
+- degré des nœuds ;
+- densité ;
+- composantes connexes ;
+- triangles et autres mesures pertinentes.
 
-### Installation
+Les mesures réellement implémentées seront sélectionnées au cours du développement.
 
-Le projet nécessite **Python 3**.
+### Algorithmes
 
-Après avoir cloné le dépôt, il est recommandé de créer un environnement virtuel :
+Plusieurs algorithmes de graphes sont prévus :
 
-```bash
-python -m venv .venv
-```
+- parcours en largeur (BFS) ;
+- parcours en profondeur (DFS) ;
+- marche aléatoire ;
+- plus court chemin ;
+- coloration de graphe.
 
-### Windows
+D'autres algorithmes pourront être ajoutés en fonction de l'avancement du projet.
 
-```bash
-.venv\Scripts\activate
-```
+### Visualisation
 
-### Linux / macOS
+La bibliothèque devra permettre de produire une représentation graphique du graphe.
 
-```bash
-source .venv/bin/activate
-```
+Les premières visualisations seront réalisées avec Matplotlib.
 
-Les dépendances peuvent ensuite être installées avec :
+À terme, nous souhaitons pouvoir afficher :
 
-```bash
-pip install -r requirements.txt
-```
+- les nœuds ;
+- les arêtes ;
+- les labels ;
+- certaines caractéristiques des nœuds et des arêtes.
 
-Le fichier `requirements.txt` contient les dépendances nécessaires au projet.
+La visualisation devra également pouvoir être utilisée dans un notebook Jupyter.
 
----
+### Export
 
-## 4. Formes géométriques
+Nous souhaitons permettre l'export des visualisations dans plusieurs formats.
 
-La bibliothèque aura pour objectif de gérer les formes 2D suivantes :
+Formats envisagés :
 
-### Point
+- SVG ;
+- PNG ;
+- PDF ;
+- éventuellement TikZ/LaTeX.
 
-Un point est défini par ses coordonnées :
+Une attention particulière sera portée aux formats vectoriels afin de produire des figures pouvant être utilisées dans des rapports ou publications.
 
-```text
-Point(x, y)
-```
+### Interopérabilité
 
-Fonctionnalités possibles :
+La bibliothèque devra pouvoir échanger des données avec d'autres outils Python.
 
-* création ;
-* modification des coordonnées ;
-* calcul de distance avec un autre point ;
-* mise à l'échelle ;
-* dessin.
+Nous prévoyons notamment :
 
-### Line
+- conversion vers une matrice d'adjacence ;
+- conversion vers des tableaux NumPy ;
+- import depuis une matrice ;
+- étude de la compatibilité avec PyTorch ;
+- étude des formats utilisés par PyTorch Geometric pour les graph neural networks.
 
-Une ligne est définie à partir de deux points :
+L'intégration avec les outils de machine learning sera développée dans une phase ultérieure du projet.
 
-```text
-Line(PointA, PointB)
-```
+## Technologies
 
-Fonctionnalités possibles :
+### Langage
 
-* création ;
-* modification ;
-* calcul de longueur ;
-* intersection avec une autre ligne ;
-* intersection avec un cercle ;
-* dessin.
+- Python
 
-### Circle
+### Bibliothèques et outils
 
-Un cercle est défini par un centre et un rayon :
+- NumPy : manipulation des matrices et données numériques ;
+- Matplotlib : visualisation ;
+- pytest : tests unitaires ;
+- Jupyter Notebook : démonstrations et exemples interactifs.
 
-```text
-Circle(center, radius)
-```
+D'autres bibliothèques pourront être ajoutées si elles sont nécessaires pour des fonctionnalités complémentaires.
 
-Fonctionnalités :
+NetworkX peut être étudié comme solution existante et servir de référence pour comprendre les fonctionnalités généralement proposées par une bibliothèque de graphes. Il n'est cependant pas utilisé pour implémenter le cœur de ShapeIt.
 
-* création ;
-* modification ;
-* calcul du périmètre ;
-* calcul de la surface ;
-* mise à l'échelle ;
-* intersection avec une ligne ;
-* intersection avec un autre cercle ;
-* dessin.
+### Outils de développement
 
-### Rectangle
+- Git : gestion des versions ;
+- GitHub : hébergement du code et collaboration ;
+- Linear : organisation du projet, milestones et suivi des issues ;
+- VS Code ou autre environnement Python pour le développement.
 
-Un rectangle est défini par sa position et ses dimensions :
+## Structure du projet
 
-```text
-Rectangle(position, width, height)
-```
+La structure prévue est la suivante :
 
-Fonctionnalités :
-
-* création ;
-* modification ;
-* calcul du périmètre ;
-* calcul de la surface ;
-* mise à l'échelle ;
-* dessin.
-
-### Triangle
-
-Un triangle est défini par trois points :
-
-```text
-Triangle(PointA, PointB, PointC)
-```
-
-Fonctionnalités :
-
-* création ;
-* modification ;
-* calcul du périmètre ;
-* calcul de la surface ;
-* mise à l'échelle ;
-* dessin.
-
----
-
-## 5. Fonctionnalités
-
-Les fonctionnalités seront développées progressivement au cours des sprints.
-
-| Fonctionnalité          | Description                                     |
-| ----------------------- | ----------------------------------------------- |
-| **Create**              | Créer une forme géométrique                     |
-| **Modify**              | Modifier les propriétés d'une forme             |
-| **Scale**               | Modifier la taille d'une forme                  |
-| **Delete**              | Supprimer une forme d'un gestionnaire de formes |
-| **Calculate Perimeter** | Calculer le périmètre d'une forme               |
-| **Calculate Surface**   | Calculer la surface d'une forme                 |
-| **Get Intersection**    | Calculer l'intersection entre certaines formes  |
-| **Draw**                | Représenter une forme avec Matplotlib           |
-
-Toutes les fonctionnalités ne sont pas nécessairement applicables à toutes les formes.
-
-Par exemple, le calcul d'une surface concerne le cercle, le rectangle et le triangle, tandis que le calcul d'une distance concerne principalement les points.
-
-Les intersections seront volontairement limitées afin de conserver un périmètre de projet raisonnable.
-
-Les premiers cas envisagés sont :
-
-* `Line × Line`
-* `Line × Circle`
-* `Circle × Circle`
-
-D'autres cas pourront être ajoutés ultérieurement en fonction du Product Backlog.
-
----
-
-## 6. Organisation du code
-
-Le projet sera organisé de manière à séparer clairement le code source, les tests et la documentation.
-
-```text
-geometry-library/
+shapeit/
 │
 ├── src/
-│   └── geometry/
+│   └── shapeit/
 │       ├── __init__.py
-│       ├── shape.py
-│       ├── point.py
-│       ├── line.py
-│       ├── circle.py
-│       ├── rectangle.py
-│       └── triangle.py
+│       ├── graph.py
+│       ├── algorithms/
+│       ├── analysis/
+│       ├── visualization/
+│       └── io/
 │
 ├── tests/
-│   ├── test_point.py
-│   ├── test_line.py
-│   ├── test_circle.py
-│   ├── test_rectangle.py
-│   └── test_triangle.py
+│   ├── test_graph.py
+│   ├── test_algorithms.py
+│   └── test_analysis.py
+│
+├── examples/
+│   └── basic_graph.py
+│
+├── notebooks/
+│   └── demo.ipynb
 │
 ├── docs/
-│   └── ...
 │
-├── requirements.txt
+├── pyproject.toml
 ├── README.md
 └── .gitignore
-```
 
-### Organisation des classes
+### `src/shapeit`
 
-Une classe commune `Shape` pourra être utilisée comme classe de base pour les différentes formes.
+Contient le code source de la bibliothèque.
 
-```text
-Shape
-│
-├── Point
-├── Line
-├── Circle
-├── Rectangle
-└── Triangle
-```
+`graph.py` contient la représentation principale du graphe et les opérations de base.
 
-Cette organisation permettra de factoriser certains comportements communs et de faciliter l'ajout de nouvelles formes.
+### `algorithms`
 
----
+Contient les algorithmes appliqués aux graphes comme BFS, DFS, marche aléatoire ou plus court chemin.
 
-## 7. Gestion du projet
+### `analysis`
 
-Le projet sera organisé selon le framework **Scrum**.
+Contient les fonctions permettant d'obtenir des informations et mesures sur la structure du graphe.
 
-### Product Backlog
+### `visualization`
 
-Les fonctionnalités du projet seront regroupées dans un **Product Backlog** géré avec Linear.
+Contient les fonctionnalités permettant d'afficher et de représenter graphiquement un graphe.
 
-Chaque fonctionnalité sera représentée sous la forme d'une User Story et pourra être décomposée en plusieurs tâches techniques.
+### `io`
 
-Exemples :
+Contient les fonctionnalités d'import, d'export et de conversion vers d'autres formats.
 
-* Créer la classe `Point`
-* Créer la classe `Circle`
-* Implémenter le calcul de la surface d'un cercle
-* Implémenter le calcul du périmètre d'un rectangle
-* Ajouter les tests unitaires
-* Implémenter le dessin d'un triangle
-* Implémenter l'intersection Line/Circle
+### `tests`
 
-### Sprints
+Contient les tests unitaires permettant de vérifier le fonctionnement de la bibliothèque.
 
-Le développement sera réalisé de manière incrémentale.
+### `examples`
 
-À chaque sprint :
+Contient des exemples simples d'utilisation.
 
-1. sélection des User Stories depuis le Product Backlog ;
-2. estimation et planification du travail ;
-3. développement des fonctionnalités ;
-4. tests ;
-5. intégration du code ;
-6. présentation de l'incrément au Product Owner ;
-7. rétrospective de l'équipe.
+### `notebooks`
 
-Le Product Backlog pourra évoluer au cours du projet en fonction des retours du Product Owner.
+Contient les notebooks Jupyter utilisés pour les démonstrations.
 
----
+### `docs`
 
-## 8. Git et travail collaboratif
+Contient la documentation complémentaire du projet.
 
-Git sera utilisé pour gérer les différentes versions du projet.
+## Organisation du développement
 
-Chaque membre travaillera sur une branche dédiée à sa fonctionnalité.
+Le projet est développé par une équipe de trois personnes.
 
-Exemple :
+Le travail est organisé en plusieurs milestones/sprints dans Linear.
 
-```text
-main
-│
-├── feature/create-circle
-├── feature/triangle-calculation
-└── feature/draw-shapes
-```
+Chaque fonctionnalité est découpée en issues. Les issues permettent de suivre les tâches à réaliser et leur état d'avancement.
 
-Une fonctionnalité terminée pourra ensuite être intégrée dans la branche principale via une **Pull Request**.
+Le code est versionné avec Git et hébergé sur GitHub.
 
-Les commits devront utiliser des messages suffisamment explicites pour comprendre les modifications apportées.
+Pour les nouvelles fonctionnalités, nous travaillons sur des branches séparées avant d'intégrer les modifications dans la branche principale.
 
-Exemples :
+## Plan de développement
 
-```text
-feat: add Circle class
-feat: implement triangle surface calculation
-test: add rectangle perimeter tests
-fix: reject negative circle radius
-```
+### Sprint 1 — Étude et première version
 
-La branche `main` devra contenir uniquement du code considéré comme stable.
+- étude des bibliothèques existantes ;
+- étude des outils complémentaires ;
+- définition du périmètre de la V1 ;
+- choix de la représentation interne ;
+- création de la structure du package ;
+- création de la classe Graph ;
+- gestion des nœuds ;
+- gestion des arêtes ;
+- premiers tests unitaires ;
+- première visualisation simple.
 
----
+### Sprint 2 — Algorithmes et analyse
 
-## 9. Tests
+- ajout des premières mesures topologiques ;
+- BFS ;
+- DFS ;
+- marche aléatoire ;
+- plus court chemin ;
+- amélioration des tests ;
+- amélioration de la visualisation.
 
-Des tests unitaires seront développés avec **Pytest** afin de vérifier les calculs et les comportements de la bibliothèque.
+### Sprint 3 — Types de graphes et interopérabilité
 
-Les tests couvriront notamment :
+- étude et ajout des graphes pondérés ;
+- graphes signés ;
+- graphes hétérogènes ;
+- attributs sur les nœuds et les arêtes ;
+- conversion NumPy ;
+- étude de l'interopérabilité avec PyTorch et PyTorch Geometric.
 
-* les calculs de surface ;
-* les calculs de périmètre ;
-* les distances ;
-* les mises à l'échelle ;
-* les intersections ;
-* les modifications de propriétés ;
-* les valeurs invalides.
+### Sprint 4 — Export et finalisation
 
-### Exemple
+- export SVG ;
+- export PDF ;
+- étude de TikZ ;
+- amélioration de la documentation ;
+- exemples complets ;
+- notebook de démonstration ;
+- tests finaux ;
+- préparation de la version finale.
 
-Pour un rectangle de longueur `5` et de largeur `3` :
+Le contenu exact des différents sprints pourra évoluer en fonction de l'avancement du projet et des décisions prises pendant les séances.
 
-```text
-Surface = 5 × 3 = 15
-Périmètre = 2 × (5 + 3) = 16
-```
+## Installation
 
-Le test vérifiera que les méthodes de la bibliothèque retournent les valeurs attendues.
+Le système d'installation sera mis en place pendant le développement.
 
-Les cas limites seront également testés, par exemple :
+L'objectif est de pouvoir installer la bibliothèque localement avec :
 
-* rayon négatif ;
-* dimensions négatives ;
-* triangle invalide ;
-* points confondus ;
-* lignes parallèles ;
-* absence d'intersection.
+    pip install .
 
-Les tests pourront être exécutés avec :
+Pour le développement :
 
-```bash
-pytest
-```
+    pip install -e .
 
----
+## Exemple d'utilisation
 
-## 10. Definition of Done
+L'API définitive n'est pas encore fixée. L'objectif est d'arriver à une utilisation simple de ce type :
 
-Une User Story sera considérée comme **Done** lorsque :
+    from shapeit import Graph
 
-* le code correspondant est implémenté ;
-* les tests nécessaires sont présents ;
-* tous les tests passent ;
-* le code a été relu ;
-* la fonctionnalité est intégrée dans la branche principale ;
-* la documentation nécessaire a été mise à jour ;
-* les critères d'acceptation de la User Story sont respectés.
+    graph = Graph()
 
----
+    graph.add_node("A")
+    graph.add_node("B")
 
-## 11. Répartition de l'équipe
+    graph.add_edge("A", "B")
 
-L'équipe est composée de trois membres.
+    print(graph.nodes())
+    print(graph.edges())
 
-La répartition des responsabilités pourra être organisée autour de trois domaines principaux :
+## État du projet
 
-### Membre 1 — Développement
+Le projet est actuellement en phase de conception et de développement de la première version.
 
-Responsabilités principales :
-
-* développement des formes ;
-* implémentation des fonctionnalités ;
-* participation aux choix techniques.
-
-### Membre 2 — Tests et qualité
-
-Responsabilités principales :
-
-* tests unitaires ;
-* validation des calculs ;
-* gestion des cas limites ;
-* vérification de la qualité du code.
-
-### Membre 3 — Documentation et organisation
-
-Responsabilités principales :
-
-* documentation ;
-* diagrammes UML ;
-* suivi du backlog ;
-* préparation des démonstrations.
-
-Cette répartition représente les responsabilités principales et ne signifie pas que chaque membre travaille exclusivement sur son domaine. L'équipe reste responsable collectivement de l'incrément produit.
-
----
-
-## 12. Évolutions possibles
-
-Le projet pourra évoluer au cours des sprints selon les priorités définies par le Product Owner.
-
-Des évolutions possibles sont :
-
-* ajout de nouvelles formes 2D ;
-* ajout de formes 3D ;
-* nouveaux types d'intersections ;
-* calculs géométriques supplémentaires ;
-* amélioration de la visualisation ;
-* ajout de conversions d'unités ;
-* amélioration de la documentation ;
-* création d'exemples d'utilisation.
-
-Ces fonctionnalités ne font pas nécessairement partie du MVP initial et seront ajoutées uniquement si elles sont sélectionnées dans le Product Backlog.
-
----
-
-## 13. Objectif du MVP
-
-Le **Minimum Viable Product** devra permettre de :
-
-* créer les cinq formes principales ;
-* modifier leurs propriétés ;
-* effectuer les calculs de base ;
-* mettre les formes à l'échelle ;
-* réaliser un nombre limité d'intersections ;
-* dessiner les formes avec Matplotlib ;
-* disposer de tests automatisés ;
-* fournir une documentation permettant à un autre développeur d'utiliser la bibliothèque.
-
-Le périmètre pourra ensuite évoluer progressivement à travers les différents sprints.
-
----
-
-## 14. Auteurs
-
-Projet réalisé dans le cadre d'un projet universitaire utilisant la méthodologie **Scrum**.
-
-**Équipe :**
-
-* Membre 1
-* Membre 2
-* Membre 3
+Les fonctionnalités et l'architecture pourront évoluer au cours des différents sprints.
