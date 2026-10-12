@@ -49,12 +49,42 @@ class Graph:
 
     def neighbors(self, node):
         """
-        Retourne les voisins d'un nœud.
+        Retourne la liste des voisins d'un nœud.
         """
         return self.adjacency.get(node, [])
+
+    def adjacency_matrix(self):
+        """
+        Retourne la liste des nœuds et la matrice d'adjacence du graphe.
+        """
+        nodes = list(self.adjacency.keys())
+        matrix = []
+
+        for source in nodes:
+            row = []
+
+            for target in nodes:
+                if target in self.adjacency[source]:
+                    row.append(1)
+                else:
+                    row.append(0)
+
+            matrix.append(row)
+
+        return nodes, matrix
 
     def __str__(self):
         """
         Retourne une représentation lisible du graphe.
         """
         return str(self.adjacency)
+
+    def degree(self, node):
+        """
+        Retourne le degré d'un nœud,
+        c'est-à-dire le nombre de voisins qu'il possède.
+        """
+        if node not in self.adjacency:
+            return 0
+
+        return len(self.adjacency[node])
