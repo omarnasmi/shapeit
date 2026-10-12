@@ -45,3 +45,4 @@ def test_directed_graph():
 
     assert "B" in g.neighbors("A")
     assert "A" not in g.neighbors("B")
+    
