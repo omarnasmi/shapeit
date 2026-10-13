@@ -68,3 +68,35 @@ def test_degree():
     assert g.degree("A") == 2
     assert g.degree("B") == 1
     assert g.degree("C") == 1
+
+
+def test_has_edge():
+    g = Graph()
+
+    g.add_edge("A", "B")
+
+    assert g.has_edge("A", "B")
+    assert g.has_edge("B", "A")
+    assert not g.has_edge("A", "C")
+
+
+def test_edges():
+    g = Graph()
+
+    g.add_edge("A", "B")
+    g.add_edge("A", "C")
+
+    assert len(g.edges()) == 2
+    assert ("A", "B") in g.edges()
+    assert ("A", "C") in g.edges()
+
+
+def test_edges_directed():
+    g = Graph(directed=True)
+
+    g.add_edge("A", "B")
+    g.add_edge("B", "A")
+
+    assert len(g.edges()) == 2
+    assert ("A", "B") in g.edges()
+    assert ("B", "A") in g.edges()
