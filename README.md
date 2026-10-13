@@ -109,6 +109,10 @@ Les premières visualisations seront réalisées avec Matplotlib.
 
 La visualisation devra également pouvoir être utilisée dans un notebook Jupyter.
 
+La première visualisation Matplotlib est disponible avec `draw_graph` pour les
+graphes simples, non orientés et non pondérés. La documentation d'utilisation
+se trouve dans [docs/visualization.md](docs/visualization.md).
+
 ### Export
 
 Nous souhaitons permettre l'export des visualisations dans plusieurs formats.

@@ -3,3 +3,6 @@ name = "pdl-graph"
 version = "0.1.0"
 description = "Bibliothèque Python de manipulation et d'analyse de graphes"
 requires-python = ">=3.10"
+dependencies = [
+    "matplotlib",
+]
