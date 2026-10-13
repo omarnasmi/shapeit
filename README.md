@@ -215,50 +215,65 @@ Pour les nouvelles fonctionnalités, nous travaillons sur des branches séparée
 
 ## Plan de développement
 
-### Sprint 1 — Étude et première version
+### Sprint 1 — Conception et première version
 
-- étude des bibliothèques existantes ;
+- étude des bibliothèques de graphes existantes ;
 - étude des outils complémentaires ;
 - définition du périmètre de la V1 ;
-- choix de la représentation interne ;
-- création de la structure du package ;
-- création de la classe Graph ;
-- gestion des nœuds ;
-- gestion des arêtes ;
+- comparaison et choix de la représentation interne du graphe ;
+- conception de la classe `Graph`, de ses attributs et de ses méthodes ;
+- réalisation d'un premier diagramme UML ;
+- initialisation du package Python ;
+- développement des opérations de gestion des nœuds et des arêtes ;
 - premiers tests unitaires ;
-- première visualisation simple.
+- première visualisation simple avec Matplotlib.
 
-### Sprint 2 — Algorithmes et analyse
+Pour la V1, nous proposons une classe principale `Graph` utilisant un dictionnaire d'adjacence comme représentation interne. Nous commencerons par des graphes simples, non orientés et non pondérés.
 
-- ajout des premières mesures topologiques ;
-- BFS ;
-- DFS ;
+### Sprint 2 — Analyse et représentation matricielle
+
+- calcul du degré des nœuds ;
+- calcul de la densité du graphe ;
+- détection des composantes connexes ;
+- conversion automatique en matrice d'adjacence ;
+- amélioration de la visualisation ;
+- tests des fonctionnalités d'analyse ;
+- documentation de l'API de base.
+
+Le dictionnaire d'adjacence restera la représentation interne principale. La matrice sera générée à partir du graphe lorsqu'elle sera nécessaire.
+
+### Sprint 3 — Algorithmes de graphes
+
+- parcours en largeur (BFS) ;
+- parcours en profondeur (DFS) ;
 - marche aléatoire ;
-- plus court chemin ;
-- amélioration des tests ;
-- amélioration de la visualisation.
+- recherche du plus court chemin ;
+- coloration de graphe ;
+- tests des algorithmes ;
+- exemples d'utilisation dans un notebook Jupyter.
 
-### Sprint 3 — Types de graphes et interopérabilité
+### Sprint 4 — Types de graphes et attributs
 
-- étude et ajout des graphes pondérés ;
-- graphes signés ;
-- graphes hétérogènes ;
-- attributs sur les nœuds et les arêtes ;
-- conversion NumPy ;
-- étude de l'interopérabilité avec PyTorch et PyTorch Geometric.
+- ajout des arêtes pondérées ;
+- gestion des attributs des nœuds et des arêtes ;
+- prise en charge des graphes signés ;
+- étude et prise en charge des graphes hétérogènes ;
+- adaptation de la visualisation ;
+- tests des nouvelles fonctionnalités.
 
-### Sprint 4 — Export et finalisation
+La prise en charge des graphes orientés sera également étudiée et intégrée selon les décisions de conception et l'avancement du projet.
 
-- export SVG ;
-- export PDF ;
-- étude de TikZ ;
+### Sprint 5 — Interopérabilité, export et finalisation
+
+- conversion vers des formats compatibles avec NumPy ;
+- étude de l'interopérabilité avec PyTorch et PyTorch Geometric ;
+- export des visualisations en SVG, PNG et PDF ;
+- finalisation du package Python ;
 - amélioration de la documentation ;
-- exemples complets ;
-- notebook de démonstration ;
-- tests finaux ;
-- préparation de la version finale.
+- tests finaux et validation ;
+- préparation de la version finale de ShapeIt.
 
-Le contenu exact des différents sprints pourra évoluer en fonction de l'avancement du projet et des décisions prises pendant les séances.
+Le contenu des sprints pourra évoluer selon l'avancement du projet et les décisions prises en équipe.
 
 ## Installation
 
