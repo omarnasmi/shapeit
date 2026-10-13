@@ -92,6 +92,19 @@ pytest
 ## Documentation
 
 La documentation détaillée de chaque module est en cours de rédaction dans [`docs/`](docs/).
+La documentation API est générée automatiquement avec
+[`pdoc`](https://pdoc.dev/) et publiée sur GitHub Pages à chaque modification de
+la branche `main`. Pour lancer la génération localement :
+
+```bash
+pip install . pdoc
+python -m pdoc --output-directory site pdl_graph
+```
+
+Le workflow est défini dans
+[`.github/workflows/docs.yml`](.github/workflows/docs.yml). GitHub Pages doit
+être configuré avec **GitHub Actions** comme source de déploiement dans les
+paramètres du dépôt.
 
 ## Feuille de route (Roadmap)
 
