@@ -328,6 +328,29 @@ class Graph:
 
         return len(self.adjacency[node])
 
+    def density(self) -> float:
+        """Calculate the graph density, ignoring self-loops.
+
+        Returns:
+            The proportion of existing edges among all possible
+            edges between distinct nodes. Returns 0.0 if the
+            graph has fewer than two nodes.
+        """
+        n = len(self.adjacency)
+
+        if n < 2:
+            return 0.0
+
+        m = sum(
+            1 for source, target in self.edges()
+            if source != target
+        )
+
+        if self.directed:
+            return m / (n * (n - 1))
+
+        return (2 * m) / (n * (n - 1))
+
     def adjacency_matrix(
         self,
     ) -> tuple[list[object], list[list[int]]]:

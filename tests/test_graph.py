@@ -164,3 +164,71 @@ def test_edges_directed():
     assert len(g.edges()) == 2
     assert ("A", "B") in g.edges()
     assert ("B", "A") in g.edges()
+
+
+
+def test_density_empty_graph():
+    """An empty graph has density 0."""
+    g = Graph()
+    assert g.density() == 0.0
+
+
+def test_density_single_node():
+    """A graph with one node has density 0."""
+    g = Graph()
+    g.add_node("A")
+    assert g.density() == 0.0
+
+
+def test_density_without_edges():
+    """A graph without edges has density 0."""
+    g = Graph()
+    g.add_node("A")
+    g.add_node("B")
+    assert g.density() == 0.0
+
+
+def test_density_undirected_graph():
+    """Check density of a partially connected undirected graph."""
+    g = Graph()
+    g.add_edge("A", "B")
+    g.add_edge("B", "C")
+
+    assert g.density() == 2 / 3
+
+
+def test_density_directed_graph():
+    """Check density of a partially connected directed graph."""
+    g = Graph(directed=True)
+    g.add_edge("A", "B")
+    g.add_edge("B", "C")
+
+    assert g.density() == 1 / 3
+
+
+def test_density_complete_graph():
+    """A complete undirected graph has density 1."""
+    g = Graph()
+    g.add_edge("A", "B")
+    g.add_edge("A", "C")
+    g.add_edge("B", "C")
+
+    assert g.density() == 1.0
+
+
+def test_density_self_loop():
+    """Self-loops are ignored in the density calculation."""
+    g = Graph()
+    g.add_edge("A", "A")
+    g.add_node("B")
+
+    assert g.density() == 0.0
+
+
+def test_density_complete_directed_graph():
+    """A complete directed graph has density 1."""
+    g = Graph(directed=True)
+    g.add_edge("A", "B")
+    g.add_edge("B", "A")
+
+    assert g.density() == 1.0
