@@ -27,11 +27,13 @@ layout::
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.colors import to_rgb
 from matplotlib.figure import Figure
+from matplotlib.patches import Circle, FancyArrowPatch
 
 
 def _circular_positions(nodes: list[object]) -> dict[object, tuple[float, float]]:
@@ -69,119 +71,215 @@ def _circular_positions(nodes: list[object]) -> dict[object, tuple[float, float]
     }
 
 
+def _spring_positions(
+    nodes: list[object],
+    edges: list[tuple[object, object]],
+    iterations: int = 200,
+) -> dict[object, tuple[float, float]]:
+    """Deterministic force-directed (Fruchterman-Reingold) layout.
+
+    Nodes start on a circle, repel each other and are attracted along
+    edges, which limits overlaps. Isolated nodes are pushed apart by the
+    repulsion. The result is normalised into ``[-1, 1]``.
+    """
+    n = len(nodes)
+    if n == 0:
+        return {}
+    if n == 1:
+        return {nodes[0]: (0.0, 0.0)}
+
+    pos = _circular_positions(nodes)
+    xs = [pos[v][0] for v in nodes]
+    ys = [pos[v][1] for v in nodes]
+    index = {v: i for i, v in enumerate(nodes)}
+    pairs = {
+        (min(index[a], index[b]), max(index[a], index[b]))
+        for a, b in edges
+        if a != b
+    }
+    k = math.sqrt(4.0 / n)
+    temperature = 0.5
+    cooling = temperature / (iterations + 1)
+    for _ in range(iterations):
+        dx = [0.0] * n
+        dy = [0.0] * n
+        for i in range(n):
+            for j in range(i + 1, n):
+                vx, vy = xs[i] - xs[j], ys[i] - ys[j]
+                dist = max(math.hypot(vx, vy), 1e-6)
+                force = k * k / dist
+                fx, fy = vx / dist * force, vy / dist * force
+                dx[i] += fx
+                dy[i] += fy
+                dx[j] -= fx
+                dy[j] -= fy
+        for i, j in pairs:
+            vx, vy = xs[i] - xs[j], ys[i] - ys[j]
+            dist = max(math.hypot(vx, vy), 1e-6)
+            force = dist * dist / k
+            fx, fy = vx / dist * force, vy / dist * force
+            dx[i] -= fx
+            dy[i] -= fy
+            dx[j] += fx
+            dy[j] += fy
+        for i in range(n):
+            # weak gravity keeps isolated nodes / components near the centre
+            dx[i] -= xs[i] * 1.0
+            dy[i] -= ys[i] * 1.0
+            length = max(math.hypot(dx[i], dy[i]), 1e-6)
+            step = min(length, temperature)
+            xs[i] += dx[i] / length * step
+            ys[i] += dy[i] / length * step
+        temperature -= cooling
+
+    cx, cy = sum(xs) / n, sum(ys) / n
+    xs = [x - cx for x in xs]
+    ys = [y - cy for y in ys]
+    scale = max(max(abs(v) for v in xs + ys), 1e-6)
+    return {v: (xs[i] / scale, ys[i] / scale) for i, v in enumerate(nodes)}
+
+
+def _per_node(value, nodes, default, name):
+    """Expand a scalar or mapping *value* into a per-node dict."""
+    if value is None:
+        return {node: default for node in nodes}
+    if isinstance(value, Mapping):
+        unknown = set(value) - set(nodes)
+        if unknown:
+            raise ValueError(f"{name} refers to unknown nodes: {sorted(map(str, unknown))}")
+        return {node: value.get(node, default) for node in nodes}
+    return {node: value for node in nodes}
+
+
+def _text_color(color) -> str:
+    """Return black or white, whichever is readable on *color*."""
+    r, g, b = to_rgb(color)
+    return "black" if 0.299 * r + 0.587 * g + 0.114 * b > 0.55 else "white"
+
+
 def draw_graph(
     graph,
     *,
     positions: Mapping[object, tuple[float, float]] | None = None,
+    layout: str = "circular",
+    node_color=None,
+    node_size=None,
+    highlight: Mapping[object, Iterable[object]] | None = None,
+    edge_color: str = "black",
     ax: Axes | None = None,
     show: bool = False,
 ) -> tuple[Figure, Axes]:
-    """Draw an undirected, unweighted graph with Matplotlib.
-
-    Nodes are rendered as scatter-plot points (``tab:blue``), edges as
-    black line segments, and each node's identifier as a centred text
-    label.
-
-    Layout
-    ------
-    When *positions* is ``None`` (the default), nodes are placed
-    automatically on a unit circle by :func:`_circular_positions`.  The
-    layout is deterministic: the same graph always produces the same
-    picture regardless of insertion order, as long as the node list is
-    stable.
-
-    Axes configuration
-    ------------------
-    The axes aspect ratio is set to ``"equal"``, a 20 % margin is added
-    around the content, and the axis frame / ticks are hidden so the
-    plot looks clean out of the box.
+    """Draw a directed or undirected graph with Matplotlib.
 
     Args:
-        graph: A :class:`~pdl_graph.Graph` instance.  Must be undirected
-            (``graph.directed`` must be ``False``).
-        positions: Optional mapping from **every** node identifier to an
-            ``(x, y)`` coordinate pair.  When provided, the mapping must
-            contain exactly the same set of nodes as *graph*.  If omitted,
-            a circular layout is computed automatically.
-        ax: Optional Matplotlib :class:`~matplotlib.axes.Axes` object on
-            which to draw.  When ``None`` (default) a new figure and axes
-            are created via :func:`matplotlib.pyplot.subplots`.
-        show: When ``True``, :func:`matplotlib.pyplot.show` is called
-            after drawing so that the figure is displayed interactively.
-            Defaults to ``False``.
+        graph: A :class:`~pdl_graph.Graph`.
+        positions: Optional mapping covering exactly every node. Overrides
+            *layout*.
+        layout: ``"circular"`` (default) or ``"spring"`` (force-directed,
+            deterministic, limits overlaps on non-trivial graphs).
+        node_color: A single colour or a ``{node: colour}`` mapping
+            (default ``tab:blue``).
+        node_size: A single diameter in points or a ``{node: size}``
+            mapping. By default the size adapts to the label length so
+            names stay readable.
+        highlight: Mapping ``{colour: nodes}``; each group of nodes is
+            coloured with its colour (overrides *node_color*), e.g. to show
+            analysis results such as components or a path.
+        edge_color: Colour of the edges.
+        ax: Existing axes to draw on.
+        show: Call :func:`matplotlib.pyplot.show` after drawing.
+
+    Directed edges are drawn as arrows pointing to the target; reciprocal
+    edges are curved so both stay visible. Empty graphs give an empty axes
+    and isolated nodes are drawn without edges.
 
     Returns:
-        A ``(figure, axes)`` tuple where *figure* is the
-        :class:`~matplotlib.figure.Figure` containing the plot and *axes*
-        is the :class:`~matplotlib.axes.Axes` on which nodes and edges
-        were drawn.
+        ``(figure, axes)``.
 
     Raises:
-        ValueError: If *graph* is directed (``graph.directed is True``),
-            or if *positions* is provided but does not cover exactly the
-            nodes present in *graph*.
-
-    Example:
-        Basic usage with automatic layout::
-
-            >>> from pdl_graph import Graph, draw_graph
-            >>> g = Graph()
-            >>> g.add_edge(1, 2)
-            >>> g.add_edge(2, 3)
-            >>> fig, ax = draw_graph(g)
-
-        Provide custom positions and save to a file::
-
-            >>> positions = {1: (0, 0), 2: (1, 0), 3: (0.5, 1)}
-            >>> fig, ax = draw_graph(g, positions=positions)
-            >>> fig.savefig("graph.png", dpi=150)
-
-        Draw into an existing axes object::
-
-            >>> import matplotlib.pyplot as plt
-            >>> fig, ax = plt.subplots()
-            >>> draw_graph(g, ax=ax)
-            (<Figure ...>, <Axes ...>)
+        ValueError: If *positions* does not cover exactly the graph nodes,
+            if *layout* is unknown, or if colour/size/highlight refer to
+            unknown nodes.
     """
-    if graph.directed:
-        raise ValueError("draw_graph only supports undirected graphs")
-
     nodes = list(graph.adjacency)
-    node_positions = (
-        _circular_positions(nodes) if positions is None else dict(positions)
-    )
+    edges = graph.edges()
+    if positions is not None:
+        node_positions = dict(positions)
+    elif layout == "circular":
+        node_positions = _circular_positions(nodes)
+    elif layout == "spring":
+        node_positions = _spring_positions(nodes, edges)
+    else:
+        raise ValueError(f"unknown layout: {layout!r}")
     if set(node_positions) != set(nodes):
         raise ValueError("positions must contain exactly every graph node")
+
+    default_sizes = {
+        node: max(26.0, 9.0 * len(str(node)) + 14.0) for node in nodes
+    }
+    diameters = _per_node(node_size, nodes, None, "node_size")
+    diameters = {
+        node: float(diameters[node] if diameters[node] is not None else default_sizes[node])
+        for node in nodes
+    }
+    colors = _per_node(node_color, nodes, "tab:blue", "node_color")
+    for group_color, members in (highlight or {}).items():
+        members = list(members)
+        unknown = [m for m in members if m not in colors]
+        if unknown:
+            raise ValueError(f"highlight refers to unknown nodes: {unknown}")
+        for member in members:
+            colors[member] = group_color
 
     if ax is None:
         figure, ax = plt.subplots()
     else:
         figure = ax.figure
 
-    for source, target in graph.edges():
-        source_x, source_y = node_positions[source]
-        target_x, target_y = node_positions[target]
-        ax.plot(
-            [source_x, target_x],
-            [source_y, target_y],
-            color="black",
-            linewidth=1,
-            zorder=1,
-        )
+    edge_set = set(edges)
+    for source, target in edges:
+        sx, sy = node_positions[source]
+        tx, ty = node_positions[target]
+        if source == target:
+            radius = 0.12
+            ax.add_patch(
+                Circle((sx, sy + radius * 1.6), radius, fill=False,
+                       edgecolor=edge_color, linewidth=1, zorder=1)
+            )
+        elif graph.directed:
+            curved = (target, source) in edge_set
+            ax.add_patch(
+                FancyArrowPatch(
+                    (sx, sy), (tx, ty),
+                    arrowstyle="-|>", mutation_scale=15,
+                    connectionstyle="arc3,rad=0.2" if curved else "arc3,rad=0",
+                    shrinkA=diameters[source] / 2 + 1,
+                    shrinkB=diameters[target] / 2 + 1,
+                    color=edge_color, linewidth=1.2, zorder=1,
+                )
+            )
+        else:
+            ax.plot([sx, tx], [sy, ty], color=edge_color, linewidth=1, zorder=1)
 
     if nodes:
         ax.scatter(
-            [node_positions[node][0] for node in nodes],
-            [node_positions[node][1] for node in nodes],
-            color="tab:blue",
+            [node_positions[v][0] for v in nodes],
+            [node_positions[v][1] for v in nodes],
+            s=[diameters[v] ** 2 for v in nodes],
+            color=[colors[v] for v in nodes],
+            edgecolors="black",
+            linewidths=0.8,
             zorder=2,
+            clip_on=False,
         )
         for node in nodes:
             x, y = node_positions[node]
-            ax.text(x, y, str(node), ha="center", va="center", zorder=3)
+            ax.text(x, y, str(node), ha="center", va="center", zorder=3,
+                    color=_text_color(colors[node]), fontweight="bold")
 
     ax.set_aspect("equal")
-    ax.margins(0.2)
+    ax.margins(0.3)
+    ax.autoscale_view()
     ax.axis("off")
 
     if show:

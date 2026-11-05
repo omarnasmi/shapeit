@@ -124,3 +124,26 @@ les nœuds isolés sont représentés correctement :
 ```bash
 .venv/bin/python -m pytest tests/test_visualization.py -q
 ```
+
+## Sprint 2 : visualisation améliorée
+
+`draw_graph` gère désormais les graphes orientés (flèches ; les arêtes
+réciproques sont courbées), les graphes vides et les sommets isolés.
+
+```python
+draw_graph(
+    graph,
+    layout="spring",                      # "circular" (défaut) ou "spring" (limite les chevauchements)
+    node_color={"A": "tab:red"},          # couleur unique ou dict {sommet: couleur}
+    node_size={"A": 50},                  # diamètre en points (unique ou dict)
+    highlight={"tab:orange": ["A", "B"],  # groupes de sommets mis en évidence
+               "tab:green": ["D", "E"]},
+)
+```
+
+Les noms sont affichés au centre des sommets (taille adaptée à la longueur du
+nom, texte noir/blanc selon le contraste). Les paramètres `node_color`,
+`node_size` et `highlight` lèvent `ValueError` si un sommet est inconnu.
+
+**Démonstration** : `PYTHONPATH=. python examples/visualization_gallery.py`
+(ajouter `--show` pour ouvrir la fenêtre) génère `examples/output/gallery.png`.
