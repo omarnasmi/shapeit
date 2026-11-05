@@ -351,6 +351,51 @@ class Graph:
 
         return (2 * m) / (n * (n - 1))
 
+    def connected_components(self) -> list[list[object]]:
+        """Return the connected components of the graph.
+
+        For a **directed** graph the direction of edges is ignored
+        (weakly connected components).  Components are listed in order of
+        their first node in :attr:`adjacency`, and nodes inside a component
+        follow the order of discovery (breadth-first).
+
+        Returns:
+            A list of components, each a list of nodes.  An empty graph
+            returns ``[]`` and each isolated node forms its own component.
+
+        Example:
+            >>> g = Graph()
+            >>> g.add_edge("A", "B")
+            >>> g.add_node("C")
+            >>> g.connected_components()
+            [['A', 'B'], ['C']]
+        """
+        undirected: dict[object, list[object]] = {
+            node: list(neighbors) for node, neighbors in self.adjacency.items()
+        }
+        if self.directed:
+            for source, neighbors in self.adjacency.items():
+                for target in neighbors:
+                    if source not in undirected[target]:
+                        undirected[target].append(source)
+
+        visited: set[object] = set()
+        components: list[list[object]] = []
+        for start in undirected:
+            if start in visited:
+                continue
+            visited.add(start)
+            component = [start]
+            index = 0
+            while index < len(component):
+                for neighbor in undirected[component[index]]:
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        component.append(neighbor)
+                index += 1
+            components.append(component)
+        return components
+
     def adjacency_matrix(
         self,
     ) -> tuple[list[object], list[list[int]]]:
