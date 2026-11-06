@@ -46,7 +46,7 @@ def test_degree_duplicate_edges_counted_once():
 def test_degree_self_loop():
     g = Graph()
     g.add_edge("A", "A")
-    assert g.degree("A") == 1
+    assert g.degree("A") == 2
 
 
 def test_degree_directed_is_out_degree():
@@ -129,7 +129,7 @@ def test_components_empty_graph():
 def test_components_single_and_isolated_nodes():
     g = Graph()
     g.add_node("A")
-    assert g.connected_components() == [["A"]]
+    assert g.connected_components() == [{"A"}]
     g.add_node("B")
     assert norm(g.connected_components()) == [["A"], ["B"]]
 
@@ -167,7 +167,7 @@ def test_components_cover_every_node_once():
 def test_components_self_loop():
     g = Graph()
     g.add_edge("A", "A")
-    assert g.connected_components() == [["A"]]
+    assert g.connected_components() == [{"A"}]
 
 
 def test_components_directed_are_weak():
@@ -241,3 +241,57 @@ def test_matrix_row_sums_match_degrees():
     g.add_edge(1, 3)
     nodes, m = g.adjacency_matrix()
     assert [sum(row) for row in m] == [g.degree(n) for n in nodes]
+
+def test_strongly_connected_components_cycle():
+    g = Graph(directed=True)
+    g.add_edge("A", "B")
+    g.add_edge("B", "C")
+    g.add_edge("C", "A")
+
+    assert g.strongly_connected_components() == [{"A", "B", "C"}]
+
+
+def test_strongly_connected_components_multiple():
+    g = Graph(directed=True)
+    g.add_edge("A", "B")
+    g.add_edge("B", "C")
+    g.add_edge("C", "A")
+    g.add_edge("C", "D")
+    g.add_node("E")
+
+    result = g.strongly_connected_components()
+
+    assert len(result) == 3
+    assert {"A", "B", "C"} in result
+    assert {"D"} in result
+    assert {"E"} in result
+
+
+def test_strongly_connected_components_empty():
+    g = Graph(directed=True)
+
+    assert g.strongly_connected_components() == []
+
+
+def test_strongly_connected_components_undirected():
+    g = Graph()
+    g.add_edge("A", "B")
+    g.add_node("C")
+
+    result = g.strongly_connected_components()
+
+    assert len(result) == 2
+    assert {"A", "B"} in result
+    assert {"C"} in result
+
+
+def test_strongly_connected_components_self_loop():
+    g = Graph(directed=True)
+    g.add_edge("A", "A")
+    g.add_node("B")
+
+    result = g.strongly_connected_components()
+
+    assert len(result) == 2
+    assert {"A"} in result
+    assert {"B"} in result

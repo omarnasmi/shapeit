@@ -297,36 +297,41 @@ class Graph:
         """
         return self.adjacency.get(node, [])
 
-    def degree(self, node: object) -> int:
-        """Return the degree of *node* (number of direct neighbours).
+    def degree(self, node: object, mode: str = "out") -> int:
+        """Calculate the degree of a node.
 
-        For an **undirected** graph this is the number of edges incident to
-        *node*.  For a **directed** graph this is the *out-degree* (number
-        of outgoing edges), since only the outgoing adjacency list is stored
-        per node.
+        For directed graphs:
+        - out: number of outgoing edges
+        - in: number of incoming edges
+        - total: sum of incoming and outgoing degrees
 
-        Args:
-            node: Identifier of the node.
-
-        Returns:
-            The degree as a non-negative integer.  Returns ``0`` if *node*
-            is not in the graph.
-
-        Example:
-            >>> g = Graph()
-            >>> g.add_edge("A", "B")
-            >>> g.add_edge("A", "C")
-            >>> g.degree("A")
-            2
-            >>> g.degree("B")
-            1
-            >>> g.degree("Z")  # unknown node
-            0
+        For undirected graphs, a self-loop counts twice.
+        Returns 0 for an unknown node.
         """
         if node not in self.adjacency:
             return 0
 
-        return len(self.adjacency[node])
+        if not self.directed:
+            degree = len(self.adjacency[node])
+            if node in self.adjacency[node]:
+                degree += 1
+            return degree
+
+        out_degree = len(self.adjacency[node])
+
+        in_degree = sum(
+            1 for neighbors in self.adjacency.values()
+            if node in neighbors
+        )
+
+        if mode == "in":
+            return in_degree
+        if mode == "total":
+            return in_degree + out_degree
+        if mode == "out":
+            return out_degree
+
+        raise ValueError("mode must be 'in', 'out' or 'total'")
 
     def density(self) -> float:
         """Calculate the graph density, ignoring self-loops.
@@ -351,49 +356,107 @@ class Graph:
 
         return (2 * m) / (n * (n - 1))
 
-    def connected_components(self) -> list[list[object]]:
-        """Return the connected components of the graph.
 
-        For a **directed** graph the direction of edges is ignored
-        (weakly connected components).  Components are listed in order of
-        their first node in :attr:`adjacency`, and nodes inside a component
-        follow the order of discovery (breadth-first).
 
-        Returns:
-            A list of components, each a list of nodes.  An empty graph
-            returns ``[]`` and each isolated node forms its own component.
+    def connected_components(self) -> list[set]:
+        """Find connected components using weak connectivity for directed graphs."""
+        visited = set()
+        components = []
 
-        Example:
-            >>> g = Graph()
-            >>> g.add_edge("A", "B")
-            >>> g.add_node("C")
-            >>> g.connected_components()
-            [['A', 'B'], ['C']]
-        """
-        undirected: dict[object, list[object]] = {
-            node: list(neighbors) for node, neighbors in self.adjacency.items()
+        # Build connections, ignoring edge direction.
+        connections = {
+            node: set() for node in self.adjacency
         }
-        if self.directed:
-            for source, neighbors in self.adjacency.items():
-                for target in neighbors:
-                    if source not in undirected[target]:
-                        undirected[target].append(source)
 
-        visited: set[object] = set()
-        components: list[list[object]] = []
-        for start in undirected:
-            if start in visited:
+        for source, neighbors in self.adjacency.items():
+            for target in neighbors:
+                connections[source].add(target)
+                connections[target].add(source)
+
+        # Explore each component with an internal DFS.
+        for node in self.adjacency:
+            if node in visited:
                 continue
-            visited.add(start)
-            component = [start]
-            index = 0
-            while index < len(component):
-                for neighbor in undirected[component[index]]:
+
+            component = set()
+            stack = [node]
+            visited.add(node)
+
+            while stack:
+                current = stack.pop()
+                component.add(current)
+
+                for neighbor in connections[current]:
                     if neighbor not in visited:
                         visited.add(neighbor)
-                        component.append(neighbor)
-                index += 1
+                        stack.append(neighbor)
+
             components.append(component)
+
+
+        return components
+
+    def strongly_connected_components(self) -> list[set]:
+        """Find strongly connected components using Kosaraju's algorithm."""
+        if not self.directed:
+            return self.connected_components()
+
+        visited = set()
+        order = []
+
+        # First DFS: determine finishing order.
+        for start in self.adjacency:
+            if start in visited:
+                continue
+
+            visited.add(start)
+            stack = [(start, iter(self.adjacency[start]))]
+
+            while stack:
+                node, neighbors = stack[-1]
+                neighbor = next(neighbors, None)
+
+                if neighbor is None:
+                    order.append(node)
+                    stack.pop()
+                elif neighbor not in visited:
+                    visited.add(neighbor)
+                    stack.append(
+                        (neighbor, iter(self.adjacency[neighbor]))
+                    )
+
+        # Reverse all edges.
+        reversed_graph = {
+            node: [] for node in self.adjacency
+        }
+
+        for source, neighbors in self.adjacency.items():
+            for target in neighbors:
+                reversed_graph[target].append(source)
+
+        # Second DFS: collect strongly connected components.
+        visited.clear()
+        components = []
+
+        for start in reversed(order):
+            if start in visited:
+                continue
+
+            component = set()
+            stack = [start]
+            visited.add(start)
+
+            while stack:
+                node = stack.pop()
+                component.add(node)
+
+                for neighbor in reversed_graph[node]:
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        stack.append(neighbor)
+
+            components.append(component)
+
         return components
 
     def adjacency_matrix(

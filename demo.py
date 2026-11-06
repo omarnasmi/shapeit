@@ -1,46 +1,242 @@
+
+"""Démonstration des fonctionnalités des Sprints 1 et 2 de ShapeIt.
+
+À lancer depuis la racine du projet : python3 demo.py
+"""
+
 from pdl_graph import Graph, draw_graph
 
-graph = Graph()
 
-# Ajouter des arêtes
-graph.add_edge("A", "B")
-graph.add_edge("A", "C")
-graph.add_edge("B", "D")
-
-# Afficher la liste d'adjacence
-print("Liste d'adjacence :")
-print(graph)
-
-# Afficher les arêtes
-print("Arêtes :", graph.edges())
+def titre(texte):
+    print(f"\n{'=' * 55}\n{texte}\n{'=' * 55}")
 
 
-# Afficher le calcul de la densité
-n = len(graph.adjacency)
-m = sum(1 for a, b in graph.edges() if a != b)
+def afficher_matrice(graph):
+    sommets, matrice = graph.adjacency_matrix()
 
-max_edges = n * (n - 1)
-if not graph.directed:
-    max_edges //= 2
+    if not sommets:
+        print("Matrice vide")
+        return
 
-print("\nNombre de sommets :", n)
-print("Nombre d'arêtes :", m)
-print("Nombre maximal d'arêtes :", max_edges)
+    largeur = max(5, *(len(str(s)) + 2 for s in sommets))
 
-print("\nCalcul de la densité :")
+    print(" " * largeur + "".join(f"{str(s):>{largeur}}" for s in sommets))
 
-if n < 2:
-    print("Densité = 0 (moins de 2 sommets)")
-else:
-    if graph.directed:
-        print(f"D = {m} / ({n} × ({n} - 1))")
-    else:
-        print(f"D = 2 × {m} / ({n} × ({n} - 1))")
-
-    print(f"D = {m} / {max_edges} = {graph.density():.2f}")
-
-print(f"Densité du graphe : {graph.density():.2f} ({graph.density() * 100:.1f} %)")
+    for sommet, ligne in zip(sommets, matrice):
+        print(
+            f"{str(sommet):>{largeur}}"
+            + "".join(f"{valeur:>{largeur}}" for valeur in ligne)
+        )
 
 
-# Afficher le graphe avec Matplotlib
-draw_graph(graph, show=True)
+def main():
+    # =========================================================
+    # SPRINT 1 - CRÉATION ET MANIPULATION
+    # =========================================================
+
+    titre("SPRINT 1 - CRÉATION ET MANIPULATION DE GRAPHES")
+
+    base = Graph()
+    base.add_node("A")
+    base.add_node("B")
+    base.add_edge("A", "B")
+    base.add_edge("B", "C")
+
+    print("Liste d'adjacence :")
+    print(base)
+    print("Sommets :", list(base.adjacency))
+    print("Arêtes :", base.edges())
+    print("Voisins de B :", base.neighbors("B"))
+    print("Arête A-B présente :", base.has_edge("A", "B"))
+    print("Arête A-C présente :", base.has_edge("A", "C"))
+
+    titre("Manipulation : supprimer une arête et un sommet")
+
+    base.remove_edge("A", "B")
+    print("Après suppression de A-B :", base.edges())
+
+    base.remove_node("C")
+    print("Après suppression de C :")
+    print(base)
+
+    titre("Graphe orienté - Sprint 1")
+
+    direction = Graph(directed=True)
+    direction.add_edge("A", "B")
+    direction.add_edge("B", "C")
+
+    print("Arêtes orientées :", direction.edges())
+    print("A vers B :", direction.has_edge("A", "B"))
+    print("B vers A :", direction.has_edge("B", "A"))
+
+    print("\nAffichage du graphe orienté (fermer la fenêtre pour continuer).")
+    draw_graph(direction, show=True)
+
+    # =========================================================
+    # SPRINT 2 - GRAPHE NON ORIENTÉ
+    # =========================================================
+
+    titre("SPRINT 2 - ANALYSE D'UN GRAPHE NON ORIENTÉ")
+
+    graph = Graph()
+    graph.add_edge("A", "B")
+    graph.add_edge("A", "C")
+    graph.add_edge("B", "D")
+
+    titre("1. Graphe utilisé pour les analyses")
+
+    print("Liste d'adjacence :")
+    print(graph)
+    print("Arêtes :", graph.edges())
+
+    titre("2. Degré des sommets")
+
+    for sommet in graph.adjacency:
+        print(f"Degré de {sommet} : {graph.degree(sommet)}")
+
+    titre("3. Densité du graphe")
+
+    n = len(graph.adjacency)
+    m = len(graph.edges())
+    maximum = n * (n - 1) // 2
+
+    print(f"Sommets : {n}, arêtes : {m}, maximum possible : {maximum}")
+    print(
+        f"Densité = {m}/{maximum} = "
+        f"{graph.density():.2f} ({graph.density() * 100:.1f} %)"
+    )
+
+    titre("4. Matrice d'adjacence")
+
+    afficher_matrice(graph)
+    print("1 : arête présente ; 0 : arête absente")
+
+    print("\nVisualisation du graphe non orienté (fermer pour continuer).")
+    draw_graph(graph, layout="spring", show=True)
+
+    titre("5. Composantes connexes")
+
+    groupes = Graph()
+    groupes.add_edge("A", "B")
+    groupes.add_edge("B", "C")
+    groupes.add_edge("D", "E")
+    groupes.add_node("F")
+
+    composantes = groupes.connected_components()
+
+    print("Composantes :", [sorted(c) for c in composantes])
+    print("Nombre de composantes :", len(composantes))
+
+    print("\nVisualisation des composantes (fermer pour continuer).")
+
+    draw_graph(
+        groupes,
+        layout="spring",
+        highlight={
+            "tab:blue": ["A", "B", "C"],
+            "tab:orange": ["D", "E"],
+            "lightgray": ["F"],
+        },
+        show=True,
+    )
+
+    titre("6. Cas particuliers")
+
+    vide = Graph()
+    print("Composantes d'un graphe vide :", vide.connected_components())
+    print("Densité d'un graphe vide :", vide.density())
+
+    seul = Graph()
+    seul.add_node("X")
+    print("Degré d'un sommet isolé :", seul.degree("X"))
+
+    # =========================================================
+    # SPRINT 2 - GRAPHE ORIENTÉ
+    # =========================================================
+
+    titre("SPRINT 2 - ANALYSE D'UN GRAPHE ORIENTÉ")
+
+    oriente = Graph(directed=True)
+
+    oriente.add_edge("A", "B")
+    oriente.add_edge("B", "C")
+    oriente.add_edge("C", "A")
+    oriente.add_edge("C", "D")
+    oriente.add_node("E")
+
+    titre("7. Structure du graphe orienté")
+
+    print("Liste d'adjacence :")
+    print(oriente)
+    print("Arêtes :", oriente.edges())
+
+    titre("8. Degrés entrants et sortants")
+
+    for sommet in oriente.adjacency:
+        entrant = oriente.degree(sommet, mode="in")
+        sortant = oriente.degree(sommet, mode="out")
+        total = oriente.degree(sommet, mode="total")
+
+        print(
+            f"{sommet} : entrant = {entrant}, "
+            f"sortant = {sortant}, total = {total}"
+        )
+
+    titre("9. Densité du graphe orienté")
+
+    n = len(oriente.adjacency)
+    m = len(oriente.edges())
+    maximum = n * (n - 1)
+
+    print(f"Sommets : {n}, arcs : {m}, maximum possible : {maximum}")
+    print(
+        f"Densité = {m}/{maximum} = "
+        f"{oriente.density():.2f} ({oriente.density() * 100:.1f} %)"
+    )
+
+    titre("10. Matrice d'adjacence")
+
+    afficher_matrice(oriente)
+    print("Ligne : sommet de départ ; colonne : sommet d'arrivée")
+
+    titre("11. Composantes faiblement connexes")
+
+    faibles = oriente.connected_components()
+
+    print("Composantes :", [sorted(c) for c in faibles])
+    print("Nombre de composantes :", len(faibles))
+
+    titre("12. Composantes fortement connexes")
+
+    fortes = oriente.strongly_connected_components()
+
+    print("Composantes :", [sorted(c) for c in fortes])
+    print("Nombre de composantes :", len(fortes))
+
+    # =========================================================
+    # VISUALISATION FINALE
+    # =========================================================
+
+    titre("13. VISUALISATION FINALE DU GRAPHE ORIENTÉ")
+
+    print("Arcs : A -> B, B -> C, C -> A, C -> D")
+    print("Sommet isolé : E")
+    print("Composantes fortes : {A, B, C}, {D}, {E}")
+    print("\nLes couleurs distinguent les composantes fortes.")
+
+    draw_graph(
+        oriente,
+        layout="spring",
+        highlight={
+            "tab:blue": ["A", "B", "C"],
+            "tab:orange": ["D"],
+            "lightgray": ["E"],
+        },
+        show=True,
+    )
+
+    titre("FIN DE LA DÉMONSTRATION")
+
+
+if __name__ == "__main__":
+    main()
