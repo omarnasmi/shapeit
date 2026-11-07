@@ -17,6 +17,8 @@ Typical usage
 """
 
 from __future__ import annotations
+import random
+from collections import deque
 
 
 class Graph:
@@ -501,6 +503,76 @@ class Graph:
 
         return nodes, matrix
 
+    def bfs(self, start):
+        """Perform a breadth-first search from a given node."""
+
+        if start not in self.adjacency:
+            raise ValueError("The starting node does not exist.")
+
+        visited = {start}
+        path = []
+        queue = deque([start])
+
+        while queue:
+            current = queue.popleft()
+            path.append(current)
+
+            for neighbor in self.neighbors(current):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
+
+        return path
+
+    def dfs(self, start):
+        """Perform a depth-first search from a given node."""
+
+        if start not in self.adjacency:
+            raise ValueError("The starting node does not exist.")
+
+        visited = set()
+        path = []
+        stack = [start]
+
+        while stack:
+            current = stack.pop()
+
+            if current in visited:
+                continue
+
+            visited.add(current)
+            path.append(current)
+
+            for neighbor in reversed(self.neighbors(current)):
+                if neighbor not in visited:
+                    stack.append(neighbor)
+
+        return path
+
+    def random_walk(self, start, steps, seed=None):
+        """Perform a random walk starting from a given node."""
+
+        if not isinstance(steps, int) or isinstance(steps, bool) or steps < 0:
+            raise ValueError("The number of steps must be a non-negative integer.")
+
+        if start not in self.adjacency:
+            raise ValueError("The starting node does not exist.")
+
+        rng = random.Random(seed)
+
+        path = [start]
+        current = start
+
+        for _ in range(steps):
+            neighbors = self.neighbors(current)
+
+            if not neighbors:
+                break
+
+            current = rng.choice(neighbors)
+            path.append(current)
+
+        return path
     # ------------------------------------------------------------------
     # Dunder helpers
     # ------------------------------------------------------------------

@@ -1,7 +1,7 @@
 
-"""Démonstration des fonctionnalités des Sprints 1 et 2 de ShapeIt.
+"""Demonstration of ShapeIt features from Sprints 1, 2 and 3.
 
-À lancer depuis la racine du projet : python3 demo.py
+Run from the project root: python3 demo.py
 """
 
 from pdl_graph import Graph, draw_graph
@@ -235,7 +235,37 @@ def main():
         show=True,
     )
 
-    titre("FIN DE LA DÉMONSTRATION")
+    # =========================================================
+    # SPRINT 3 - GRAPH TRAVERSAL ALGORITHMS
+    # =========================================================
+
+    titre("SPRINT 3 - GRAPH TRAVERSAL ALGORITHMS")
+
+    graph3 = Graph()
+    graph3.add_edge("A", "B")
+    graph3.add_edge("A", "C")
+    graph3.add_edge("B", "D")
+    graph3.add_edge("B", "E")
+
+    print("Adjacency list:")
+    print(graph3)
+
+    # Breadth-first search
+    titre("1. BREADTH-FIRST SEARCH (BFS)")
+    print("BFS from A:", graph3.bfs("A"))
+
+    # Depth-first search
+    titre("2. DEPTH-FIRST SEARCH (DFS)")
+    print("DFS from A:", graph3.dfs("A"))
+
+    # Random walk
+    titre("3. RANDOM WALK")
+    print("Random walk from A:", graph3.random_walk("A", 5, seed=42))
+    print("Same seed:", graph3.random_walk("A", 5, seed=42))
+
+    # Graph visualization
+    titre("4. GRAPH VISUALIZATION")
+    draw_graph(graph3, layout="spring", show=True)
 
 
 if __name__ == "__main__":
