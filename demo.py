@@ -267,6 +267,64 @@ def main():
     titre("4. GRAPH VISUALIZATION")
     draw_graph(graph3, layout="spring", show=True)
 
+    print("\n=======================================================")
+    print("SPRINT 4 - GRAPHES PONDÉRÉS ET PLUS COURT CHEMIN")
+    print("=======================================================")
+
+    g4 = Graph()
+
+    g4.add_edge("A", "B", 4)
+    g4.add_edge("A", "C", 2)
+    g4.add_edge("C", "B", 1)
+    g4.add_edge("B", "D", 3)
+    g4.add_edge("C", "D", 7)
+
+    print("\n=======================================================")
+    print("1. POIDS DES ARÊTES")
+    print("=======================================================")
+
+    print("Poids A-B :", g4.get_edge_weight("A", "B"))
+    print("Poids A-C :", g4.get_edge_weight("A", "C"))
+    print("Poids C-B :", g4.get_edge_weight("C", "B"))
+
+    print("\nPoids par défaut :")
+
+    g4.add_edge("D", "E")
+
+    print("Poids D-E :", g4.get_edge_weight("D", "E"))
+
+    print("\n=======================================================")
+    print("2. PLUS COURT CHEMIN - DIJKSTRA")
+    print("=======================================================")
+
+    path, distance = g4.shortest_path("A", "D")
+
+    print("Chemin le plus court de A à D :", path)
+    print("Distance totale :", distance)
+
+    print("\n=======================================================")
+    print("3. GRAPHE ORIENTÉ")
+    print("=======================================================")
+
+    directed_graph = Graph(directed=True)
+
+    directed_graph.add_edge("A", "B", 2)
+    directed_graph.add_edge("B", "C", 3)
+
+    path, distance = directed_graph.shortest_path("A", "C")
+
+    print("Chemin A -> C :", path)
+    print("Distance :", distance)
+
+    print("\n=======================================================")
+    print("4. CAS PARTICULIER : MÊME SOMMET")
+    print("=======================================================")
+
+    path, distance = g4.shortest_path("A", "A")
+
+    print("Chemin A -> A :", path)
+    print("Distance :", distance)
+
 
 if __name__ == "__main__":
     main()
