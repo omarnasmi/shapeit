@@ -17,220 +17,149 @@ Typical usage
 """
 
 from __future__ import annotations
+
+import heapq
 import random
 from collections import deque
+from itertools import count
 
 
 class Graph:
     """Adjacency-list graph supporting directed and undirected modes.
 
-    The graph is stored as a dictionary mapping each node to the **ordered**
-    list of its neighbours.  All mutating operations (add/remove node/edge)
-    maintain this dictionary in a consistent state.
+    The graph is stored as a dictionary mapping each node to the ordered
+    list of its neighbours.
 
     Attributes:
-        directed (bool): ``True`` if edges are one-way (directed),
-            ``False`` (default) if edges are bidirectional (undirected).
-        adjacency (dict[object, list[object]]): Mapping from every node to
-            the ordered list of nodes it is directly connected to.
-
-    Example:
-        Create an undirected triangle::
-
-            >>> g = Graph()
-            >>> g.add_edge("A", "B")
-            >>> g.add_edge("B", "C")
-            >>> g.add_edge("C", "A")
-            >>> len(g.edges())
-            3
-
-        Create a directed graph::
-
-            >>> dg = Graph(directed=True)
-            >>> dg.add_edge("X", "Y")
-            >>> dg.has_edge("X", "Y")
-            True
-            >>> dg.has_edge("Y", "X")
-            False
+        directed (bool): True if the graph is directed.
+        adjacency (dict): Mapping from each node to its neighbours.
+        weights (dict): Mapping from an edge to its numerical weight.
     """
 
     def __init__(self, directed: bool = False) -> None:
         """Initialise an empty graph.
 
         Args:
-            directed: When ``True`` the graph treats edges as one-way
-                (i.e. adding an edge from *A* to *B* does **not**
-                automatically add an edge from *B* to *A*).
-                Defaults to ``False`` (undirected).
-
-        Example:
-            >>> g = Graph()
-            >>> g.directed
-            False
-            >>> dg = Graph(directed=True)
-            >>> dg.directed
-            True
+            directed: When True, edges are one-way.
+                Defaults to False.
         """
         self.directed = directed
         self.adjacency: dict[object, list[object]] = {}
+
+        # Edge weights are stored separately so that the existing
+        # adjacency-list representation remains compatible.
+        self.weights: dict[
+            tuple[object, object],
+            int | float,
+        ] = {}
 
     # ------------------------------------------------------------------
     # Node operations
     # ------------------------------------------------------------------
 
     def add_node(self, node: object) -> None:
-        """Add a node to the graph if it does not already exist.
-
-        Calling this method on an existing node is a **no-op**; the node's
-        neighbour list is left unchanged.
-
-        Args:
-            node: Any hashable object to use as the node identifier.
-
-        Example:
-            >>> g = Graph()
-            >>> g.add_node("X")
-            >>> "X" in g.adjacency
-            True
-            >>> g.add_node("X")  # duplicate → no-op
-            >>> list(g.adjacency.keys())
-            ['X']
-        """
+        """Add a node if it does not already exist."""
         if node not in self.adjacency:
             self.adjacency[node] = []
 
     def remove_node(self, node: object) -> None:
-        """Remove a node and all edges that reference it.
+        """Remove a node and all edges associated with it."""
+        if node not in self.adjacency:
+            return
 
-        All occurrences of *node* in every neighbour list are deleted before
-        the node entry itself is removed from :attr:`adjacency`.  If *node*
-        does not exist, the method is a **no-op**.
+        del self.adjacency[node]
 
-        Args:
-            node: Identifier of the node to remove.
+        # Remove the node from all neighbour lists.
+        for neighbors in self.adjacency.values():
+            if node in neighbors:
+                neighbors.remove(node)
 
-        Example:
-            >>> g = Graph()
-            >>> g.add_edge("A", "B")
-            >>> g.remove_node("B")
-            >>> "B" in g.adjacency
-            False
-            >>> g.neighbors("A")
-            []
-        """
-        if node in self.adjacency:
-            del self.adjacency[node]
+        # Remove all weights related to the deleted node.
+        edges_to_remove = [
+            edge
+            for edge in self.weights
+            if node in edge
+        ]
 
-            for neighbors in self.adjacency.values():
-                if node in neighbors:
-                    neighbors.remove(node)
+        for edge in edges_to_remove:
+            del self.weights[edge]
 
     # ------------------------------------------------------------------
     # Edge operations
     # ------------------------------------------------------------------
 
-    def add_edge(self, source: object, target: object) -> None:
-        """Add an edge between *source* and *target*.
+    def add_edge(
+        self,
+        source: object,
+        target: object,
+        weight: int | float = 1,
+    ) -> None:
+        """Add an edge between source and target.
 
-        Both nodes are created automatically if they do not yet exist.
-        Duplicate edges are silently ignored (the graph does not support
-        multi-edges).
-
-        For an **undirected** graph the reverse edge (*target* → *source*)
-        is also added so that the neighbour lists remain symmetric.
+        Nodes are automatically created if necessary.
 
         Args:
-            source: Identifier of the origin node.
-            target: Identifier of the destination node.
+            source: Origin node.
+            target: Destination node.
+            weight: Numerical edge weight. Defaults to 1.
 
-        Example:
-            Undirected edge (both directions stored)::
-
-                >>> g = Graph()
-                >>> g.add_edge("A", "B")
-                >>> g.neighbors("A")
-                ['B']
-                >>> g.neighbors("B")
-                ['A']
-
-            Directed edge (one direction only)::
-
-                >>> dg = Graph(directed=True)
-                >>> dg.add_edge("A", "B")
-                >>> dg.neighbors("A")
-                ['B']
-                >>> dg.neighbors("B")
-                []
+        Raises:
+            TypeError: If weight is not numeric.
         """
+        if (
+            not isinstance(weight, (int, float))
+            or isinstance(weight, bool)
+        ):
+            raise TypeError(
+                "The edge weight must be numeric."
+            )
+
         self.add_node(source)
         self.add_node(target)
 
         if target not in self.adjacency[source]:
             self.adjacency[source].append(target)
 
+        self.weights[(source, target)] = weight
+
         if not self.directed:
             if source not in self.adjacency[target]:
                 self.adjacency[target].append(source)
 
-    def remove_edge(self, source: object, target: object) -> None:
-        """Remove the edge between *source* and *target*.
+            self.weights[(target, source)] = weight
 
-        For an **undirected** graph the reverse edge (*target* → *source*)
-        is also removed.  If the edge does not exist the method is a
-        **no-op** and no exception is raised.
-
-        Args:
-            source: Identifier of the origin node.
-            target: Identifier of the destination node.
-
-        Example:
-            >>> g = Graph()
-            >>> g.add_edge("A", "B")
-            >>> g.remove_edge("A", "B")
-            >>> g.has_edge("A", "B")
-            False
-            >>> g.has_edge("B", "A")
-            False
-        """
-        if source in self.adjacency and target in self.adjacency[source]:
+    def remove_edge(
+        self,
+        source: object,
+        target: object,
+    ) -> None:
+        """Remove an edge and its associated weight."""
+        if (
+            source in self.adjacency
+            and target in self.adjacency[source]
+        ):
             self.adjacency[source].remove(target)
 
+        self.weights.pop((source, target), None)
+
         if not self.directed:
-            if target in self.adjacency and source in self.adjacency[target]:
+            if (
+                target in self.adjacency
+                and source in self.adjacency[target]
+            ):
                 self.adjacency[target].remove(source)
+
+            self.weights.pop((target, source), None)
 
     # ------------------------------------------------------------------
     # Query helpers
     # ------------------------------------------------------------------
 
     def edges(self) -> list[tuple[object, object]]:
-        """Return all edges of the graph without duplicates.
+        """Return all edges without duplicates.
 
-        For a **directed** graph every ``(source, target)`` pair in
-        :attr:`adjacency` is included as a separate directed edge.
-
-        For an **undirected** graph each unordered pair ``{source, target}``
-        appears exactly once in the returned list; the order of nodes within
-        the tuple follows the iteration order of :attr:`adjacency`.
-
-        Returns:
-            A list of ``(source, target)`` tuples representing all edges.
-
-        Example:
-            Undirected graph — no duplicate edges::
-
-                >>> g = Graph()
-                >>> g.add_edge("A", "B")
-                >>> g.edges()
-                [('A', 'B')]
-
-            Directed graph — both directions are distinct edges::
-
-                >>> dg = Graph(directed=True)
-                >>> dg.add_edge("A", "B")
-                >>> dg.add_edge("B", "A")
-                >>> sorted(dg.edges())
-                [('A', 'B'), ('B', 'A')]
+        Directed graphs keep every directed edge.
+        Undirected graphs return each edge only once.
         """
         result: list[tuple[object, object]] = []
         seen: set[frozenset] = set()
@@ -240,108 +169,114 @@ class Graph:
                 if self.directed:
                     result.append((source, target))
                 else:
-                    edge = frozenset((source, target))
+                    edge = frozenset(
+                        (source, target)
+                    )
 
                     if edge not in seen:
                         seen.add(edge)
-                        result.append((source, target))
+                        result.append(
+                            (source, target)
+                        )
 
         return result
 
-    def has_edge(self, source: object, target: object) -> bool:
-        """Check whether a direct edge from *source* to *target* exists.
+    def has_edge(
+        self,
+        source: object,
+        target: object,
+    ) -> bool:
+        """Return True if an edge exists."""
+        return target in self.adjacency.get(
+            source,
+            [],
+        )
 
-        For an **undirected** graph, ``has_edge(A, B)`` and
-        ``has_edge(B, A)`` always return the same value because both
-        directions are stored.
+    def get_edge_weight(
+        self,
+        source: object,
+        target: object,
+    ) -> int | float:
+        """Return the weight associated with an edge.
 
-        Args:
-            source: Identifier of the origin node.
-            target: Identifier of the destination node.
-
-        Returns:
-            ``True`` if the edge exists, ``False`` otherwise (including
-            when either node is absent from the graph).
-
-        Example:
-            >>> g = Graph()
-            >>> g.add_edge("A", "B")
-            >>> g.has_edge("A", "B")
-            True
-            >>> g.has_edge("B", "A")
-            True
-            >>> g.has_edge("A", "C")
-            False
+        Raises:
+            ValueError: If the edge does not exist.
         """
-        return target in self.adjacency.get(source, [])
+        if not self.has_edge(source, target):
+            raise ValueError(
+                f"The edge ({source!r}, {target!r}) "
+                "does not exist."
+            )
 
-    def neighbors(self, node: object) -> list[object]:
-        """Return the list of direct neighbours of *node*.
+        return self.weights[
+            (source, target)
+        ]
 
-        For an **undirected** graph, if an edge ``(A, B)`` exists then *B*
-        appears in ``neighbors("A")`` and *A* appears in ``neighbors("B")``.
+    def neighbors(
+        self,
+        node: object,
+    ) -> list[object]:
+        """Return the direct neighbours of a node."""
+        return self.adjacency.get(
+            node,
+            [],
+        )
 
-        Args:
-            node: Identifier of the node whose neighbours are requested.
-
-        Returns:
-            An ordered list of neighbour node identifiers, or an empty list
-            if *node* is not in the graph.
-
-        Example:
-            >>> g = Graph()
-            >>> g.add_edge("A", "B")
-            >>> g.add_edge("A", "C")
-            >>> g.neighbors("A")
-            ['B', 'C']
-            >>> g.neighbors("Z")  # unknown node
-            []
-        """
-        return self.adjacency.get(node, [])
-
-    def degree(self, node: object, mode: str = "out") -> int:
+    def degree(
+        self,
+        node: object,
+        mode: str = "out",
+    ) -> int:
         """Calculate the degree of a node.
 
         For directed graphs:
-        - out: number of outgoing edges
-        - in: number of incoming edges
-        - total: sum of incoming and outgoing degrees
+        - out: outgoing degree
+        - in: incoming degree
+        - total: incoming + outgoing
 
         For undirected graphs, a self-loop counts twice.
-        Returns 0 for an unknown node.
         """
         if node not in self.adjacency:
             return 0
 
         if not self.directed:
-            degree = len(self.adjacency[node])
-            if node in self.adjacency[node]:
-                degree += 1
-            return degree
+            node_degree = len(
+                self.adjacency[node]
+            )
 
-        out_degree = len(self.adjacency[node])
+            if node in self.adjacency[node]:
+                node_degree += 1
+
+            return node_degree
+
+        out_degree = len(
+            self.adjacency[node]
+        )
 
         in_degree = sum(
-            1 for neighbors in self.adjacency.values()
+            1
+            for neighbors
+            in self.adjacency.values()
             if node in neighbors
         )
 
         if mode == "in":
             return in_degree
-        if mode == "total":
-            return in_degree + out_degree
+
         if mode == "out":
             return out_degree
 
-        raise ValueError("mode must be 'in', 'out' or 'total'")
+        if mode == "total":
+            return in_degree + out_degree
+
+        raise ValueError(
+            "mode must be 'in', 'out' or 'total'"
+        )
 
     def density(self) -> float:
-        """Calculate the graph density, ignoring self-loops.
+        """Calculate graph density.
 
-        Returns:
-            The proportion of existing edges among all possible
-            edges between distinct nodes. Returns 0.0 if the
-            graph has fewer than two nodes.
+        Self-loops are ignored.
         """
         n = len(self.adjacency)
 
@@ -349,152 +284,218 @@ class Graph:
             return 0.0
 
         m = sum(
-            1 for source, target in self.edges()
+            1
+            for source, target in self.edges()
             if source != target
         )
 
         if self.directed:
-            return m / (n * (n - 1))
+            return m / (
+                n * (n - 1)
+            )
 
-        return (2 * m) / (n * (n - 1))
+        return (
+            2 * m
+        ) / (
+            n * (n - 1)
+        )
 
+    # ------------------------------------------------------------------
+    # Connected components
+    # ------------------------------------------------------------------
 
+    def connected_components(
+        self,
+    ) -> list[set]:
+        """Find connected components.
 
-    def connected_components(self) -> list[set]:
-        """Find connected components using weak connectivity for directed graphs."""
+        For directed graphs, weak connectivity is used.
+        """
         visited = set()
         components = []
 
-        # Build connections, ignoring edge direction.
         connections = {
-            node: set() for node in self.adjacency
+            node: set()
+            for node in self.adjacency
         }
 
-        for source, neighbors in self.adjacency.items():
+        for source, neighbors in (
+            self.adjacency.items()
+        ):
             for target in neighbors:
-                connections[source].add(target)
-                connections[target].add(source)
+                connections[source].add(
+                    target
+                )
+                connections[target].add(
+                    source
+                )
 
-        # Explore each component with an internal DFS.
         for node in self.adjacency:
             if node in visited:
                 continue
 
             component = set()
             stack = [node]
+
             visited.add(node)
 
             while stack:
                 current = stack.pop()
                 component.add(current)
 
-                for neighbor in connections[current]:
+                for neighbor in (
+                    connections[current]
+                ):
                     if neighbor not in visited:
-                        visited.add(neighbor)
-                        stack.append(neighbor)
+                        visited.add(
+                            neighbor
+                        )
+                        stack.append(
+                            neighbor
+                        )
 
-            components.append(component)
-
+            components.append(
+                component
+            )
 
         return components
 
-    def strongly_connected_components(self) -> list[set]:
-        """Find strongly connected components using Kosaraju's algorithm."""
+    def strongly_connected_components(
+        self,
+    ) -> list[set]:
+        """Find strongly connected components.
+
+        Kosaraju's algorithm is used for directed graphs.
+        """
         if not self.directed:
             return self.connected_components()
 
         visited = set()
         order = []
 
-        # First DFS: determine finishing order.
+        # First DFS: finishing order.
         for start in self.adjacency:
             if start in visited:
                 continue
 
             visited.add(start)
-            stack = [(start, iter(self.adjacency[start]))]
+
+            stack = [
+                (
+                    start,
+                    iter(
+                        self.adjacency[start]
+                    ),
+                )
+            ]
 
             while stack:
                 node, neighbors = stack[-1]
-                neighbor = next(neighbors, None)
+
+                neighbor = next(
+                    neighbors,
+                    None,
+                )
 
                 if neighbor is None:
                     order.append(node)
                     stack.pop()
+
                 elif neighbor not in visited:
-                    visited.add(neighbor)
-                    stack.append(
-                        (neighbor, iter(self.adjacency[neighbor]))
+                    visited.add(
+                        neighbor
                     )
 
-        # Reverse all edges.
+                    stack.append(
+                        (
+                            neighbor,
+                            iter(
+                                self.adjacency[
+                                    neighbor
+                                ]
+                            ),
+                        )
+                    )
+
+        # Reverse graph.
         reversed_graph = {
-            node: [] for node in self.adjacency
+            node: []
+            for node in self.adjacency
         }
 
-        for source, neighbors in self.adjacency.items():
+        for source, neighbors in (
+            self.adjacency.items()
+        ):
             for target in neighbors:
-                reversed_graph[target].append(source)
+                reversed_graph[
+                    target
+                ].append(source)
 
-        # Second DFS: collect strongly connected components.
         visited.clear()
         components = []
 
+        # Second DFS.
         for start in reversed(order):
             if start in visited:
                 continue
 
             component = set()
             stack = [start]
+
             visited.add(start)
 
             while stack:
                 node = stack.pop()
                 component.add(node)
 
-                for neighbor in reversed_graph[node]:
+                for neighbor in (
+                    reversed_graph[node]
+                ):
                     if neighbor not in visited:
-                        visited.add(neighbor)
-                        stack.append(neighbor)
+                        visited.add(
+                            neighbor
+                        )
+                        stack.append(
+                            neighbor
+                        )
 
-            components.append(component)
+            components.append(
+                component
+            )
 
         return components
 
+    # ------------------------------------------------------------------
+    # Matrix representation
+    # ------------------------------------------------------------------
+
     def adjacency_matrix(
         self,
-    ) -> tuple[list[object], list[list[int]]]:
-        """Return a matrix representation of the graph's adjacency.
+    ) -> tuple[
+        list[object],
+        list[list[int]],
+    ]:
+        """Return the adjacency matrix.
 
-        The node order in the returned list determines both the row and
-        column indices of the matrix.  The order follows the insertion
-        order of nodes in :attr:`adjacency` (Python ≥ 3.7 dict ordering).
-
-        Returns:
-            A two-element tuple ``(nodes, matrix)`` where:
-
-            - **nodes** – ordered list of all node identifiers.
-            - **matrix** – a square ``N × N`` list-of-lists of ``int``
-              values where ``matrix[i][j]`` is ``1`` when an edge from
-              ``nodes[i]`` to ``nodes[j]`` exists, and ``0`` otherwise.
-
-        Example:
-            >>> g = Graph()
-            >>> g.add_edge("A", "B")
-            >>> nodes, mat = g.adjacency_matrix()
-            >>> nodes
-            ['A', 'B']
-            >>> mat
-            [[0, 1], [1, 0]]
+        The matrix contains 1 when an edge exists
+        and 0 otherwise.
         """
-        nodes = list(self.adjacency.keys())
-        matrix: list[list[int]] = []
+        nodes = list(
+            self.adjacency.keys()
+        )
+
+        matrix: list[
+            list[int]
+        ] = []
 
         for source in nodes:
             row: list[int] = []
 
             for target in nodes:
-                if target in self.adjacency[source]:
+                if (
+                    target
+                    in self.adjacency[source]
+                ):
                     row.append(1)
                 else:
                     row.append(0)
@@ -503,32 +504,58 @@ class Graph:
 
         return nodes, matrix
 
-    def bfs(self, start):
-        """Perform a breadth-first search from a given node."""
+    # ------------------------------------------------------------------
+    # Graph traversal
+    # ------------------------------------------------------------------
 
+    def bfs(
+        self,
+        start: object,
+    ) -> list[object]:
+        """Perform a breadth-first search."""
         if start not in self.adjacency:
-            raise ValueError("The starting node does not exist.")
+            raise ValueError(
+                "The starting node "
+                "does not exist."
+            )
 
         visited = {start}
         path = []
-        queue = deque([start])
+
+        queue = deque(
+            [start]
+        )
 
         while queue:
             current = queue.popleft()
-            path.append(current)
 
-            for neighbor in self.neighbors(current):
+            path.append(
+                current
+            )
+
+            for neighbor in (
+                self.neighbors(current)
+            ):
                 if neighbor not in visited:
-                    visited.add(neighbor)
-                    queue.append(neighbor)
+                    visited.add(
+                        neighbor
+                    )
+                    queue.append(
+                        neighbor
+                    )
 
         return path
 
-    def dfs(self, start):
-        """Perform a depth-first search from a given node."""
-
+    def dfs(
+        self,
+        start: object,
+    ) -> list[object]:
+        """Perform a depth-first search."""
         if start not in self.adjacency:
-            raise ValueError("The starting node does not exist.")
+            raise ValueError(
+                "The starting node "
+                "does not exist."
+            )
 
         visited = set()
         path = []
@@ -540,23 +567,46 @@ class Graph:
             if current in visited:
                 continue
 
-            visited.add(current)
-            path.append(current)
+            visited.add(
+                current
+            )
 
-            for neighbor in reversed(self.neighbors(current)):
+            path.append(
+                current
+            )
+
+            for neighbor in reversed(
+                self.neighbors(current)
+            ):
                 if neighbor not in visited:
-                    stack.append(neighbor)
+                    stack.append(
+                        neighbor
+                    )
 
         return path
 
-    def random_walk(self, start, steps, seed=None):
-        """Perform a random walk starting from a given node."""
-
-        if not isinstance(steps, int) or isinstance(steps, bool) or steps < 0:
-            raise ValueError("The number of steps must be a non-negative integer.")
+    def random_walk(
+        self,
+        start: object,
+        steps: int,
+        seed=None,
+    ) -> list[object]:
+        """Perform a random walk."""
+        if (
+            not isinstance(steps, int)
+            or isinstance(steps, bool)
+            or steps < 0
+        ):
+            raise ValueError(
+                "The number of steps must be "
+                "a non-negative integer."
+            )
 
         if start not in self.adjacency:
-            raise ValueError("The starting node does not exist.")
+            raise ValueError(
+                "The starting node "
+                "does not exist."
+            )
 
         rng = random.Random(seed)
 
@@ -564,32 +614,194 @@ class Graph:
         current = start
 
         for _ in range(steps):
-            neighbors = self.neighbors(current)
+            node_neighbors = (
+                self.neighbors(current)
+            )
 
-            if not neighbors:
+            if not node_neighbors:
                 break
 
-            current = rng.choice(neighbors)
-            path.append(current)
+            current = rng.choice(
+                node_neighbors
+            )
+
+            path.append(
+                current
+            )
 
         return path
+
+    # ------------------------------------------------------------------
+    # Shortest path
+    # ------------------------------------------------------------------
+
+    def shortest_path(
+        self,
+        start: object,
+        end: object,
+    ) -> tuple[
+        list[object],
+        int | float,
+    ]:
+        """Find the shortest path using Dijkstra's algorithm.
+
+        Edge weights are used when available.
+        Edges without an explicit weight have a
+        default weight of 1.
+
+        Args:
+            start: Starting node.
+            end: Destination node.
+
+        Returns:
+            A tuple containing:
+            - the shortest path
+            - the total distance
+
+        Raises:
+            ValueError: If start or end does not exist.
+            ValueError: If no path exists.
+            ValueError: If a negative edge weight exists.
+        """
+        if start not in self.adjacency:
+            raise ValueError(
+                "The starting node "
+                "does not exist."
+            )
+
+        if end not in self.adjacency:
+            raise ValueError(
+                "The destination node "
+                "does not exist."
+            )
+
+        # Special case.
+        if start == end:
+            return [start], 0
+
+        # Dijkstra cannot handle negative weights.
+        for weight in self.weights.values():
+            if weight < 0:
+                raise ValueError(
+                    "Negative edge weights are "
+                    "not supported by "
+                    "Dijkstra's algorithm."
+                )
+
+        distances = {
+            node: float("inf")
+            for node in self.adjacency
+        }
+
+        previous = {
+            node: None
+            for node in self.adjacency
+        }
+
+        distances[start] = 0
+
+        # Counter prevents heapq from comparing
+        # node objects when distances are equal.
+        tie_breaker = count()
+
+        priority_queue = [
+            (
+                0,
+                next(tie_breaker),
+                start,
+            )
+        ]
+
+        while priority_queue:
+            (
+                current_distance,
+                _,
+                current,
+            ) = heapq.heappop(
+                priority_queue
+            )
+
+            # Ignore outdated entries.
+            if (
+                current_distance
+                > distances[current]
+            ):
+                continue
+
+            # Destination reached.
+            if current == end:
+                break
+
+            for neighbor in (
+                self.neighbors(current)
+            ):
+                weight = (
+                    self.get_edge_weight(
+                        current,
+                        neighbor,
+                    )
+                )
+
+                new_distance = (
+                    current_distance
+                    + weight
+                )
+
+                if (
+                    new_distance
+                    < distances[neighbor]
+                ):
+                    distances[
+                        neighbor
+                    ] = new_distance
+
+                    previous[
+                        neighbor
+                    ] = current
+
+                    heapq.heappush(
+                        priority_queue,
+                        (
+                            new_distance,
+                            next(
+                                tie_breaker
+                            ),
+                            neighbor,
+                        ),
+                    )
+
+        if distances[end] == float("inf"):
+            raise ValueError(
+                f"No path exists between "
+                f"{start!r} and {end!r}."
+            )
+
+        # Reconstruct shortest path.
+        path = []
+        current = end
+
+        while current is not None:
+            path.append(
+                current
+            )
+
+            current = previous[
+                current
+            ]
+
+        path.reverse()
+
+        return (
+            path,
+            distances[end],
+        )
+
     # ------------------------------------------------------------------
     # Dunder helpers
     # ------------------------------------------------------------------
 
     def __str__(self) -> str:
-        """Return a human-readable representation of the adjacency mapping.
-
-        The output is the string form of :attr:`adjacency` and is primarily
-        intended for quick debugging in interactive sessions.
-
-        Returns:
-            String representation of the internal adjacency dictionary.
-
-        Example:
-            >>> g = Graph()
-            >>> g.add_edge("A", "B")
-            >>> print(g)
-            {'A': ['B'], 'B': ['A']}
-        """
-        return str(self.adjacency)
+        """Return a readable representation of the graph."""
+        return str(
+            self.adjacency
+        )

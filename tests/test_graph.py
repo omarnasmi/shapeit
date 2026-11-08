@@ -232,3 +232,175 @@ def test_density_complete_directed_graph():
     g.add_edge("B", "A")
 
     assert g.density() == 1.0
+
+def test_default_edge_weight():
+    """An edge without an explicit weight has a default weight of 1."""
+    g = Graph()
+
+    g.add_edge("A", "B")
+
+    assert g.get_edge_weight("A", "B") == 1
+    assert g.get_edge_weight("B", "A") == 1
+
+
+def test_custom_edge_weight():
+    """An edge can store and return a custom numerical weight."""
+    g = Graph()
+
+    g.add_edge("A", "B", 5)
+
+    assert g.get_edge_weight("A", "B") == 5
+    assert g.get_edge_weight("B", "A") == 5
+
+
+def test_directed_edge_weight():
+    """A directed graph stores the weight only in the given direction."""
+    g = Graph(directed=True)
+
+    g.add_edge("A", "B", 4)
+
+    assert g.get_edge_weight("A", "B") == 4
+
+
+def test_remove_edge_removes_weight():
+    """Removing an edge also removes its stored weight."""
+    g = Graph()
+
+    g.add_edge("A", "B", 6)
+    g.remove_edge("A", "B")
+
+    assert ("A", "B") not in g.weights
+    assert ("B", "A") not in g.weights
+
+
+def test_remove_node_removes_weights():
+    """Removing a node also removes every weight linked to that node."""
+    g = Graph()
+
+    g.add_edge("A", "B", 3)
+    g.add_edge("B", "C", 7)
+
+    g.remove_node("B")
+
+    assert ("A", "B") not in g.weights
+    assert ("B", "A") not in g.weights
+    assert ("B", "C") not in g.weights
+    assert ("C", "B") not in g.weights
+
+
+def test_invalid_edge_weight():
+    """A non-numeric edge weight must be rejected."""
+    g = Graph()
+
+    try:
+        g.add_edge("A", "B", "invalid")
+        assert False
+    except TypeError:
+        pass
+
+
+def test_shortest_path_weighted():
+    """Dijkstra returns the shortest weighted path and its total distance."""
+    g = Graph()
+
+    g.add_edge("A", "B", 4)
+    g.add_edge("A", "C", 2)
+    g.add_edge("C", "B", 1)
+    g.add_edge("B", "D", 3)
+    g.add_edge("C", "D", 7)
+
+    path, distance = g.shortest_path("A", "D")
+
+    assert path == ["A", "C", "B", "D"]
+    assert distance == 6
+
+
+def test_shortest_path_unweighted():
+    """Unweighted edges are treated as having a cost of 1."""
+    g = Graph()
+
+    g.add_edge("A", "B")
+    g.add_edge("B", "C")
+
+    path, distance = g.shortest_path("A", "C")
+
+    assert path == ["A", "B", "C"]
+    assert distance == 2
+
+
+def test_shortest_path_directed():
+    """Shortest path respects edge direction in a directed graph."""
+    g = Graph(directed=True)
+
+    g.add_edge("A", "B", 2)
+    g.add_edge("B", "C", 3)
+
+    path, distance = g.shortest_path("A", "C")
+
+    assert path == ["A", "B", "C"]
+    assert distance == 5
+
+
+def test_shortest_path_same_node():
+    """The shortest path from a node to itself has distance 0."""
+    g = Graph()
+
+    g.add_node("A")
+
+    path, distance = g.shortest_path("A", "A")
+
+    assert path == ["A"]
+    assert distance == 0
+
+
+def test_shortest_path_missing_start():
+    """A missing starting node must raise ValueError."""
+    g = Graph()
+
+    g.add_node("B")
+
+    try:
+        g.shortest_path("A", "B")
+        assert False
+    except ValueError:
+        pass
+
+
+def test_shortest_path_missing_end():
+    """A missing destination node must raise ValueError."""
+    g = Graph()
+
+    g.add_node("A")
+
+    try:
+        g.shortest_path("A", "B")
+        assert False
+    except ValueError:
+        pass
+
+
+def test_shortest_path_no_path():
+    """A graph with no route between the nodes must raise ValueError."""
+    g = Graph()
+
+    g.add_node("A")
+    g.add_node("B")
+
+    try:
+        g.shortest_path("A", "B")
+        assert False
+    except ValueError:
+        pass
+
+
+def test_shortest_path_negative_weight():
+    """Dijkstra must reject negative edge weights."""
+    g = Graph()
+
+    g.add_edge("A", "B", -2)
+
+    try:
+        g.shortest_path("A", "B")
+        assert False
+    except ValueError:
+        pass
