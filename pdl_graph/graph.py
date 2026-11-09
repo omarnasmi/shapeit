@@ -18,11 +18,8 @@ Typical usage
 
 from __future__ import annotations
 
-import heapq
 import random
 from collections import deque
-from itertools import count
-
 
 class Graph:
     """Adjacency-list graph supporting directed and undirected modes.
@@ -643,50 +640,21 @@ class Graph:
         list[object],
         int | float,
     ]:
-        """Find the shortest path using Dijkstra's algorithm.
+        """Find the shortest path using Bellman-Ford.
 
-        Edge weights are used when available.
-        Edges without an explicit weight have a
-        default weight of 1.
-
-        Args:
-            start: Starting node.
-            end: Destination node.
-
-        Returns:
-            A tuple containing:
-            - the shortest path
-            - the total distance
-
-        Raises:
-            ValueError: If start or end does not exist.
-            ValueError: If no path exists.
-            ValueError: If a negative edge weight exists.
+        Supports positive and negative edge weights.
+        Detects negative-weight cycles reachable
+        from the starting node.
         """
         if start not in self.adjacency:
             raise ValueError(
-                "The starting node "
-                "does not exist."
+                "The starting node does not exist."
             )
 
         if end not in self.adjacency:
             raise ValueError(
-                "The destination node "
-                "does not exist."
+                "The destination node does not exist."
             )
-
-        # Special case.
-        if start == end:
-            return [start], 0
-
-        # Dijkstra cannot handle negative weights.
-        for weight in self.weights.values():
-            if weight < 0:
-                raise ValueError(
-                    "Negative edge weights are "
-                    "not supported by "
-                    "Dijkstra's algorithm."
-                )
 
         distances = {
             node: float("inf")
@@ -700,74 +668,55 @@ class Graph:
 
         distances[start] = 0
 
-        # Counter prevents heapq from comparing
-        # node objects when distances are equal.
-        tie_breaker = count()
+        # Relax all edges at most |V| - 1 times.
+        for _ in range(len(self.adjacency) - 1):
+            updated = False
 
-        priority_queue = [
-            (
-                0,
-                next(tie_breaker),
-                start,
-            )
-        ]
+            for source, target in self.edges():
+                weight = self.get_edge_weight(
+                    source, target
+                )
 
-        while priority_queue:
-            (
-                current_distance,
-                _,
-                current,
-            ) = heapq.heappop(
-                priority_queue
-            )
+                # An undirected edge can be
+                # traversed in both directions.
+                directions = [(source, target)]
 
-            # Ignore outdated entries.
-            if (
-                current_distance
-                > distances[current]
-            ):
-                continue
+                if not self.directed and source != target:
+                    directions.append((target, source))
 
-            # Destination reached.
-            if current == end:
+                for u, v in directions:
+                    if distances[u] == float("inf"):
+                        continue
+
+                    new_distance = distances[u] + weight
+
+                    if new_distance < distances[v]:
+                        distances[v] = new_distance
+                        previous[v] = u
+                        updated = True
+
+            if not updated:
                 break
 
-            for neighbor in (
-                self.neighbors(current)
-            ):
-                weight = (
-                    self.get_edge_weight(
-                        current,
-                        neighbor,
-                    )
-                )
+        # Detect reachable negative-weight cycles.
+        for source, target in self.edges():
+            weight = self.get_edge_weight(
+                source, target
+            )
 
-                new_distance = (
-                    current_distance
-                    + weight
-                )
+            directions = [(source, target)]
 
+            if not self.directed and source != target:
+                directions.append((target, source))
+
+            for u, v in directions:
                 if (
-                    new_distance
-                    < distances[neighbor]
+                    distances[u] != float("inf")
+                    and distances[u] + weight < distances[v]
                 ):
-                    distances[
-                        neighbor
-                    ] = new_distance
-
-                    previous[
-                        neighbor
-                    ] = current
-
-                    heapq.heappush(
-                        priority_queue,
-                        (
-                            new_distance,
-                            next(
-                                tie_breaker
-                            ),
-                            neighbor,
-                        ),
+                    raise ValueError(
+                        "A negative-weight cycle "
+                        "is reachable from the starting node."
                     )
 
         if distances[end] == float("inf"):
@@ -776,25 +725,18 @@ class Graph:
                 f"{start!r} and {end!r}."
             )
 
-        # Reconstruct shortest path.
+        # Reconstruct the shortest path.
         path = []
         current = end
 
         while current is not None:
-            path.append(
-                current
-            )
-
-            current = previous[
-                current
-            ]
+            path.append(current)
+            current = previous[current]
 
         path.reverse()
 
-        return (
-            path,
-            distances[end],
-        )
+        return path, distances[end]
+
 
     # ------------------------------------------------------------------
     # Dunder helpers

@@ -166,6 +166,12 @@ def draw_graph(
     node_size=None,
     highlight: Mapping[object, Iterable[object]] | None = None,
     edge_color: str = "black",
+    highlight_edges: Iterable[tuple[object, object]] | None = None,
+    visit_order: Iterable[object] | None = None,
+    walk: Iterable[object] | None = None,
+    show_weights: bool = False,
+    total_distance: int | float | None = None,
+    title: str | None = None,
     ax: Axes | None = None,
     show: bool = False,
 ) -> tuple[Figure, Axes]:
@@ -186,6 +192,12 @@ def draw_graph(
             coloured with its colour (overrides *node_color*), e.g. to show
             analysis results such as components or a path.
         edge_color: Colour of the edges.
+        highlight_edges: Edges to emphasise (for example a shortest path).
+        visit_order: Order in which nodes were discovered by BFS/DFS.
+        walk: Consecutive nodes visited during a random walk (repeats allowed).
+        show_weights: Display the numerical weight of each edge.
+        total_distance: Optional shortest-path distance shown under the graph.
+        title: Optional title of the figure.
         ax: Existing axes to draw on.
         show: Call :func:`matplotlib.pyplot.show` after drawing.
 
@@ -231,20 +243,52 @@ def draw_graph(
         for member in members:
             colors[member] = group_color
 
+    # A traversal order (BFS/DFS) is not necessarily an edge-by-edge path.
+    # Only actual path edges are highlighted for shortest paths and walks.
+    ordered_nodes = list(visit_order) if visit_order is not None else None
+    walk_nodes = list(walk) if walk is not None else None
+    if ordered_nodes is not None:
+        if len(ordered_nodes) != len(set(ordered_nodes)):
+            raise ValueError("visit_order must not repeat nodes")
+        unknown = [node for node in ordered_nodes if node not in graph.adjacency]
+        if unknown:
+            raise ValueError(f"visit_order refers to unknown nodes: {unknown}")
+    if walk_nodes is not None:
+        unknown = [node for node in walk_nodes if node not in graph.adjacency]
+        if unknown:
+            raise ValueError(f"walk refers to unknown nodes: {unknown}")
+        for source, target in zip(walk_nodes, walk_nodes[1:]):
+            if not graph.has_edge(source, target):
+                raise ValueError(f"walk uses a missing edge: {(source, target)!r}")
+
+    selected_edges = set(highlight_edges or [])
+    if walk_nodes is not None:
+        selected_edges.update(zip(walk_nodes, walk_nodes[1:]))
+    actual_edges = set(edges)
+    for source, target in selected_edges:
+        if (source, target) not in actual_edges and not (
+            not graph.directed and (target, source) in actual_edges
+        ):
+            raise ValueError(f"highlight_edges contains a missing edge: {(source, target)!r}")
+
     if ax is None:
-        figure, ax = plt.subplots()
+        figure, ax = plt.subplots(figsize=(8.5, 6))
     else:
         figure = ax.figure
 
     edge_set = set(edges)
     for source, target in edges:
+        selected = ((source, target) in selected_edges or
+                    (not graph.directed and (target, source) in selected_edges))
+        current_color = "tab:green" if selected else edge_color
+        current_width = 3.8 if selected else 1.4
         sx, sy = node_positions[source]
         tx, ty = node_positions[target]
         if source == target:
             radius = 0.12
             ax.add_patch(
                 Circle((sx, sy + radius * 1.6), radius, fill=False,
-                       edgecolor=edge_color, linewidth=1, zorder=1)
+                       edgecolor=current_color, linewidth=current_width, zorder=1)
             )
         elif graph.directed:
             curved = (target, source) in edge_set
@@ -255,11 +299,26 @@ def draw_graph(
                     connectionstyle="arc3,rad=0.2" if curved else "arc3,rad=0",
                     shrinkA=diameters[source] / 2 + 1,
                     shrinkB=diameters[target] / 2 + 1,
-                    color=edge_color, linewidth=1.2, zorder=1,
+                    color=current_color, linewidth=current_width, zorder=1,
                 )
             )
         else:
-            ax.plot([sx, tx], [sy, ty], color=edge_color, linewidth=1, zorder=1)
+            ax.plot([sx, tx], [sy, ty], color=current_color, linewidth=current_width, zorder=1)
+
+        if show_weights:
+            weight = graph.get_edge_weight(source, target)
+            mx, my = (sx + tx) / 2, (sy + ty) / 2
+            if source == target:
+                my += 0.32
+            else:
+                # Shift labels slightly away from their edges for readability.
+                length = max(math.hypot(tx - sx, ty - sy), 1e-9)
+                mx += -(ty - sy) / length * 0.07
+                my += (tx - sx) / length * 0.07
+            ax.text(mx, my, str(weight), ha="center", va="center",
+                    fontsize=10, fontweight="bold", zorder=5,
+                    bbox={"facecolor": "white", "alpha": 0.92,
+                          "edgecolor": "none", "boxstyle": "round,pad=0.2"})
 
     if nodes:
         ax.scatter(
@@ -277,8 +336,50 @@ def draw_graph(
             ax.text(x, y, str(node), ha="center", va="center", zorder=3,
                     color=_text_color(colors[node]), fontweight="bold")
 
+    if walk_nodes is not None:
+        # Number each move. Repeated passages are deliberately visible.
+        passage_counts = {}
+        for step, (source, target) in enumerate(zip(walk_nodes, walk_nodes[1:]), start=1):
+            key = (source, target) if graph.directed else frozenset((source, target))
+            repetition = passage_counts.get(key, 0)
+            passage_counts[key] = repetition + 1
+            sx, sy = node_positions[source]
+            tx, ty = node_positions[target]
+            mx, my = (sx + tx) / 2, (sy + ty) / 2
+            dx, dy = tx - sx, ty - sy
+            length = max(math.hypot(dx, dy), 1e-9)
+            offset = 14 + 16 * repetition
+            ax.annotate(str(step), (mx, my),
+                        xytext=(-dy / length * offset, dx / length * offset),
+                        textcoords="offset points", ha="center", va="center",
+                        fontsize=8, fontweight="bold", color="white", zorder=7,
+                        bbox={"boxstyle": "circle,pad=0.25", "facecolor": "#b45309",
+                              "edgecolor": "white", "linewidth": 1})
+
+    if ordered_nodes is not None:
+        for order_number, node in enumerate(ordered_nodes, start=1):
+            x, y = node_positions[node]
+            ax.annotate(str(order_number), (x, y), xytext=(18, 16),
+                        textcoords="offset points", ha="center", va="center",
+                        fontsize=9, fontweight="bold", color="white", zorder=6,
+                        bbox={"boxstyle": "circle,pad=0.25", "facecolor": "#b45309",
+                              "edgecolor": "white", "linewidth": 1})
+
+    if title:
+        ax.set_title(title, fontsize=13, fontweight="bold", pad=18)
+    if total_distance is not None:
+        ax.text(0.5, -0.03, f"Distance totale : {total_distance}",
+                transform=ax.transAxes, ha="center", va="top",
+                fontsize=11, fontweight="bold", color="tab:green")
+    if walk_nodes is not None:
+        description = "  →  ".join(str(node) for node in walk_nodes)
+        ax.text(0.5, -0.1, f"Marche aléatoire : {description}",
+                transform=ax.transAxes, ha="center", va="top", fontsize=10,
+                wrap=True)
+        # The step-by-step sequence preserves repeat visits that cannot be
+        # expressed by one unique number on each vertex.
     ax.set_aspect("equal")
-    ax.margins(0.3)
+    ax.margins(0.38)
     ax.autoscale_view()
     ax.axis("off")
 

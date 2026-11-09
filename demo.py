@@ -1,329 +1,373 @@
+"""Démonstration interactive de ShapeIt — Sprints 1, 2 et 3.
 
-"""Demonstration of ShapeIt features from Sprints 1, 2 and 3.
-
-Run from the project root: python3 demo.py
+Lancer depuis la racine du dépôt : python3 demo.py
+Une seule fenêtre Matplotlib avec les boutons Précédent / Suivant.
 """
+
+import textwrap
+
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Button
 
 from pdl_graph import Graph, draw_graph
 
 
-def titre(texte):
-    print(f"\n{'=' * 55}\n{texte}\n{'=' * 55}")
+def page(sprint, titre, graphe, resultats, **options):
+    """Décrire une vue sans lancer immédiatement une fenêtre."""
+    return {
+        "sprint": sprint,
+        "titre": titre,
+        "graphe": graphe,
+        "resultats": resultats,
+        "options": options,
+    }
 
 
-def afficher_matrice(graph):
-    sommets, matrice = graph.adjacency_matrix()
+def construire_pages():
+    """Préparer les exemples et calculer les résultats avec ShapeIt."""
+    pages = []
 
-    if not sommets:
-        print("Matrice vide")
-        return
-
-    largeur = max(5, *(len(str(s)) + 2 for s in sommets))
-
-    print(" " * largeur + "".join(f"{str(s):>{largeur}}" for s in sommets))
-
-    for sommet, ligne in zip(sommets, matrice):
-        print(
-            f"{str(sommet):>{largeur}}"
-            + "".join(f"{valeur:>{largeur}}" for valeur in ligne)
-        )
-
-
-def main():
-    # =========================================================
-    # SPRINT 1 - CRÉATION ET MANIPULATION
-    # =========================================================
-
-    titre("SPRINT 1 - CRÉATION ET MANIPULATION DE GRAPHES")
-
+    # SPRINT 1 — Création et manipulation
     base = Graph()
     base.add_node("A")
     base.add_node("B")
     base.add_edge("A", "B")
     base.add_edge("B", "C")
+    pages.append(page(
+        1, "Création d'un graphe", base,
+        [
+            f"Liste d'adjacence : {base}",
+            f"Sommets : {list(base.adjacency)}",
+            f"Arêtes : {base.edges()}",
+            f"Voisins de B : {base.neighbors('B')}",
+            f"Arête A–B présente : {base.has_edge('A', 'B')}",
+            f"Arête A–C présente : {base.has_edge('A', 'C')}",
+        ],
+    ))
 
-    print("Liste d'adjacence :")
-    print(base)
-    print("Sommets :", list(base.adjacency))
-    print("Arêtes :", base.edges())
-    print("Voisins de B :", base.neighbors("B"))
-    print("Arête A-B présente :", base.has_edge("A", "B"))
-    print("Arête A-C présente :", base.has_edge("A", "C"))
-
-    titre("Manipulation : supprimer une arête et un sommet")
-
-    base.remove_edge("A", "B")
-    print("Après suppression de A-B :", base.edges())
-
-    base.remove_node("C")
-    print("Après suppression de C :")
-    print(base)
-
-    titre("Graphe orienté - Sprint 1")
+    base_modifie = Graph()
+    base_modifie.add_edge("A", "B")
+    base_modifie.add_edge("B", "C")
+    base_modifie.remove_edge("A", "B")
+    base_modifie.remove_node("C")
+    pages.append(page(
+        1, "Suppression d'une arête et d'un sommet", base_modifie,
+        [
+            "Départ : arêtes A–B et B–C.",
+            "Suppression de A–B, puis du sommet C.",
+            f"Liste d'adjacence finale : {base_modifie}",
+        ],
+    ))
 
     direction = Graph(directed=True)
     direction.add_edge("A", "B")
     direction.add_edge("B", "C")
+    pages.append(page(
+        1, "Graphe orienté", direction,
+        [
+            f"Arcs : {direction.edges()}",
+            f"A vers B : {direction.has_edge('A', 'B')}",
+            f"B vers A : {direction.has_edge('B', 'A')}",
+            "Les flèches indiquent le sens des connexions.",
+        ],
+    ))
 
-    print("Arêtes orientées :", direction.edges())
-    print("A vers B :", direction.has_edge("A", "B"))
-    print("B vers A :", direction.has_edge("B", "A"))
-
-    print("\nAffichage du graphe orienté (fermer la fenêtre pour continuer).")
-    draw_graph(direction, show=True)
-
-    # =========================================================
-    # SPRINT 2 - GRAPHE NON ORIENTÉ
-    # =========================================================
-
-    titre("SPRINT 2 - ANALYSE D'UN GRAPHE NON ORIENTÉ")
-
-    graph = Graph()
-    graph.add_edge("A", "B")
-    graph.add_edge("A", "C")
-    graph.add_edge("B", "D")
-
-    titre("1. Graphe utilisé pour les analyses")
-
-    print("Liste d'adjacence :")
-    print(graph)
-    print("Arêtes :", graph.edges())
-
-    titre("2. Degré des sommets")
-
-    for sommet in graph.adjacency:
-        print(f"Degré de {sommet} : {graph.degree(sommet)}")
-
-    titre("3. Densité du graphe")
-
-    n = len(graph.adjacency)
-    m = len(graph.edges())
-    maximum = n * (n - 1) // 2
-
-    print(f"Sommets : {n}, arêtes : {m}, maximum possible : {maximum}")
-    print(
-        f"Densité = {m}/{maximum} = "
-        f"{graph.density():.2f} ({graph.density() * 100:.1f} %)"
-    )
-
-    titre("4. Matrice d'adjacence")
-
-    afficher_matrice(graph)
-    print("1 : arête présente ; 0 : arête absente")
-
-    print("\nVisualisation du graphe non orienté (fermer pour continuer).")
-    draw_graph(graph, layout="spring", show=True)
-
-    titre("5. Composantes connexes")
+    # SPRINT 2 — Analyse
+    analyse = Graph()
+    analyse.add_edge("A", "B")
+    analyse.add_edge("A", "C")
+    analyse.add_edge("B", "D")
+    sommets, matrice = analyse.adjacency_matrix()
+    degres = [f"Degré de {n} : {analyse.degree(n)}" for n in sommets]
+    pages.append(page(
+        2, "Degrés, densité et matrice d'adjacence", analyse,
+        [
+            f"Sommets : {len(sommets)} ; arêtes : {len(analyse.edges())}",
+            *degres,
+            f"Densité : {analyse.density():.2f}",
+            f"Ordre de la matrice : {sommets}",
+            *[f"{n} : {ligne}" for n, ligne in zip(sommets, matrice)],
+        ],
+        layout="spring",
+    ))
 
     groupes = Graph()
     groupes.add_edge("A", "B")
     groupes.add_edge("B", "C")
     groupes.add_edge("D", "E")
     groupes.add_node("F")
-
     composantes = groupes.connected_components()
-
-    print("Composantes :", [sorted(c) for c in composantes])
-    print("Nombre de composantes :", len(composantes))
-
-    print("\nVisualisation des composantes (fermer pour continuer).")
-
-    draw_graph(
-        groupes,
+    pages.append(page(
+        2, "Composantes connexes", groupes,
+        [
+            f"Nombre de composantes : {len(composantes)}",
+            f"Composantes : {[sorted(c) for c in composantes]}",
+            "Chaque composante est représentée par une couleur.",
+        ],
         layout="spring",
         highlight={
             "tab:blue": ["A", "B", "C"],
             "tab:orange": ["D", "E"],
             "lightgray": ["F"],
         },
-        show=True,
-    )
-
-    titre("6. Cas particuliers")
-
-    vide = Graph()
-    print("Composantes d'un graphe vide :", vide.connected_components())
-    print("Densité d'un graphe vide :", vide.density())
-
-    seul = Graph()
-    seul.add_node("X")
-    print("Degré d'un sommet isolé :", seul.degree("X"))
-
-    # =========================================================
-    # SPRINT 2 - GRAPHE ORIENTÉ
-    # =========================================================
-
-    titre("SPRINT 2 - ANALYSE D'UN GRAPHE ORIENTÉ")
+    ))
 
     oriente = Graph(directed=True)
-
     oriente.add_edge("A", "B")
     oriente.add_edge("B", "C")
     oriente.add_edge("C", "A")
     oriente.add_edge("C", "D")
     oriente.add_node("E")
-
-    titre("7. Structure du graphe orienté")
-
-    print("Liste d'adjacence :")
-    print(oriente)
-    print("Arêtes :", oriente.edges())
-
-    titre("8. Degrés entrants et sortants")
-
-    for sommet in oriente.adjacency:
-        entrant = oriente.degree(sommet, mode="in")
-        sortant = oriente.degree(sommet, mode="out")
-        total = oriente.degree(sommet, mode="total")
-
-        print(
-            f"{sommet} : entrant = {entrant}, "
-            f"sortant = {sortant}, total = {total}"
-        )
-
-    titre("9. Densité du graphe orienté")
-
-    n = len(oriente.adjacency)
-    m = len(oriente.edges())
-    maximum = n * (n - 1)
-
-    print(f"Sommets : {n}, arcs : {m}, maximum possible : {maximum}")
-    print(
-        f"Densité = {m}/{maximum} = "
-        f"{oriente.density():.2f} ({oriente.density() * 100:.1f} %)"
-    )
-
-    titre("10. Matrice d'adjacence")
-
-    afficher_matrice(oriente)
-    print("Ligne : sommet de départ ; colonne : sommet d'arrivée")
-
-    titre("11. Composantes faiblement connexes")
-
-    faibles = oriente.connected_components()
-
-    print("Composantes :", [sorted(c) for c in faibles])
-    print("Nombre de composantes :", len(faibles))
-
-    titre("12. Composantes fortement connexes")
-
     fortes = oriente.strongly_connected_components()
-
-    print("Composantes :", [sorted(c) for c in fortes])
-    print("Nombre de composantes :", len(fortes))
-
-    # =========================================================
-    # VISUALISATION FINALE
-    # =========================================================
-
-    titre("13. VISUALISATION FINALE DU GRAPHE ORIENTÉ")
-
-    print("Arcs : A -> B, B -> C, C -> A, C -> D")
-    print("Sommet isolé : E")
-    print("Composantes fortes : {A, B, C}, {D}, {E}")
-    print("\nLes couleurs distinguent les composantes fortes.")
-
-    draw_graph(
-        oriente,
+    faibles = oriente.connected_components()
+    pages.append(page(
+        2, "Analyse d'un graphe orienté", oriente,
+        [
+            f"Arcs : {oriente.edges()}",
+            f"Densité : {oriente.density():.2f}",
+            f"Composantes faibles : {[sorted(c) for c in faibles]}",
+            f"Composantes fortes : {[sorted(c) for c in fortes]}",
+            "Les couleurs distinguent les composantes fortes.",
+        ],
         layout="spring",
         highlight={
             "tab:blue": ["A", "B", "C"],
             "tab:orange": ["D"],
             "lightgray": ["E"],
         },
-        show=True,
-    )
+    ))
 
-    # =========================================================
-    # SPRINT 3 - GRAPH TRAVERSAL ALGORITHMS
-    # =========================================================
+    vide = Graph()
+    isole = Graph()
+    isole.add_node("X")
+    pages.append(page(
+        2, "Cas particuliers", isole,
+        [
+            f"Composantes d'un graphe vide : {vide.connected_components()}",
+            f"Densité d'un graphe vide : {vide.density()}",
+            f"Degré d'un sommet isolé : {isole.degree('X')}",
+            "Le dessin représente ici un sommet sans arête.",
+        ],
+    ))
 
-    titre("SPRINT 3 - GRAPH TRAVERSAL ALGORITHMS")
+    # SPRINT 3 — Parcours et plus court chemin
+    parcours = Graph()
+    parcours.add_edge("A", "B")
+    parcours.add_edge("A", "C")
+    parcours.add_edge("B", "D")
+    parcours.add_edge("B", "E")
+    ordre_bfs = parcours.bfs("A")
+    ordre_dfs = parcours.dfs("A")
+    marche = parcours.random_walk("A", 5, seed=42)
 
-    graph3 = Graph()
-    graph3.add_edge("A", "B")
-    graph3.add_edge("A", "C")
-    graph3.add_edge("B", "D")
-    graph3.add_edge("B", "E")
+    pages.append(page(
+        3, "Parcours en largeur (BFS)", parcours,
+        [
+            "Départ : A",
+            f"Ordre de visite : {' → '.join(map(str, ordre_bfs))}",
+            "Les numéros indiquent l'ordre de découverte.",
+            "Il ne s'agit pas nécessairement d'un chemin continu.",
+        ],
+        layout="spring",
+        visit_order=ordre_bfs,
+    ))
 
-    print("Adjacency list:")
-    print(graph3)
+    pages.append(page(
+        3, "Parcours en profondeur (DFS)", parcours,
+        [
+            "Départ : A",
+            f"Ordre de visite : {' → '.join(map(str, ordre_dfs))}",
+            "Les numéros indiquent l'ordre de visite.",
+        ],
+        layout="spring",
+        visit_order=ordre_dfs,
+    ))
 
-    # Breadth-first search
-    titre("1. BREADTH-FIRST SEARCH (BFS)")
-    print("BFS from A:", graph3.bfs("A"))
+    pages.append(page(
+        3, "Marche aléatoire", parcours,
+        [
+            "Départ : A ; nombre de pas demandé : 5",
+            "Graine aléatoire : 42",
+            f"Trajet : {' → '.join(map(str, marche))}",
+            "Les passages répétés sont conservés.",
+            "Les arêtes parcourues sont mises en évidence.",
+        ],
+        layout="spring",
+        walk=marche,
+    ))
 
-    # Depth-first search
-    titre("2. DEPTH-FIRST SEARCH (DFS)")
-    print("DFS from A:", graph3.dfs("A"))
+    pondere = Graph()
+    pondere.add_edge("A", "B", 4)
+    pondere.add_edge("A", "C", 2)
+    pondere.add_edge("C", "B", 1)
+    pondere.add_edge("B", "D", 3)
+    pondere.add_edge("C", "D", 7)
+    pondere.add_edge("D", "E")
+    chemin, distance = pondere.shortest_path("A", "D")
+    pages.append(page(
+        3, "Bellman-Ford — plus court chemin", pondere,
+        [
+            "Départ : A ; arrivée : D",
+            f"Chemin : {' → '.join(map(str, chemin))}",
+            f"Distance totale : {distance}",
+            "Les nombres indiquent les poids des arêtes.",
+            "Le chemin choisi est mis en évidence en vert.",
+            "Poids par défaut de D–E : 1",
+        ],
+        layout="spring",
+        show_weights=True,
+        highlight_edges=list(zip(chemin, chemin[1:])),
+        total_distance=distance,
+    ))
 
-    # Random walk
-    titre("3. RANDOM WALK")
-    print("Random walk from A:", graph3.random_walk("A", 5, seed=42))
-    print("Same seed:", graph3.random_walk("A", 5, seed=42))
+    negatif = Graph(directed=True)
+    negatif.add_edge("A", "B", 4)
+    negatif.add_edge("A", "C", 5)
+    negatif.add_edge("B", "C", -2)
+    chemin_negatif, distance_negative = negatif.shortest_path("A", "C")
+    pages.append(page(
+        3, "Bellman-Ford — poids négatif", negatif,
+        [
+            "Départ : A ; arrivée : C",
+            f"Chemin : {' → '.join(map(str, chemin_negatif))}",
+            f"Distance totale : {distance_negative}",
+            "Le poids B→C vaut −2.",
+            "Bellman-Ford peut prendre en charge ce poids négatif.",
+        ],
+        layout="spring",
+        show_weights=True,
+        highlight_edges=list(zip(chemin_negatif, chemin_negatif[1:])),
+        total_distance=distance_negative,
+    ))
 
-    # Graph visualization
-    titre("4. GRAPH VISUALIZATION")
-    draw_graph(graph3, layout="spring", show=True)
+    cycle = Graph(directed=True)
+    cycle.add_edge("A", "B", 2)
+    cycle.add_edge("B", "C", -4)
+    cycle.add_edge("C", "A", 1)
+    try:
+        cycle.shortest_path("A", "C")
+    except ValueError as erreur:
+        if "negative-weight cycle" in str(erreur):
+            constat = "Cycle négatif accessible détecté."
+        else:
+            constat = f"Erreur : {erreur}"
+    else:
+        constat = "Le cycle négatif n'a pas été détecté."
+    pages.append(page(
+        3, "Bellman-Ford — cycle négatif", cycle,
+        [
+            "Cycle A → B → C → A",
+            "Coût du cycle : 2 − 4 + 1 = −1",
+            constat,
+            "Il n'existe pas de plus court chemin fini.",
+        ],
+        layout="spring",
+        show_weights=True,
+    ))
 
-    print("\n=======================================================")
-    print("SPRINT 4 - GRAPHES PONDÉRÉS ET PLUS COURT CHEMIN")
-    print("=======================================================")
+    pages.append(page(
+        3, "Cas particulier : même sommet", pondere,
+        [
+            "Départ : A ; arrivée : A",
+            f"Résultat : {pondere.shortest_path('A', 'A')}",
+            "En l'absence de cycle négatif accessible,",
+            "la distance d'un sommet vers lui-même vaut 0.",
+        ],
+        layout="spring",
+        show_weights=True,
+    ))
 
-    g4 = Graph()
+    return pages
 
-    g4.add_edge("A", "B", 4)
-    g4.add_edge("A", "C", 2)
-    g4.add_edge("C", "B", 1)
-    g4.add_edge("B", "D", 3)
-    g4.add_edge("C", "D", 7)
 
-    print("\n=======================================================")
-    print("1. POIDS DES ARÊTES")
-    print("=======================================================")
+def lancer_diaporama(pages):
+    """Afficher toutes les démonstrations dans une seule fenêtre Matplotlib."""
+    if not pages:
+        return
 
-    print("Poids A-B :", g4.get_edge_weight("A", "B"))
-    print("Poids A-C :", g4.get_edge_weight("A", "C"))
-    print("Poids C-B :", g4.get_edge_weight("C", "B"))
+    figure = plt.figure(figsize=(12, 7.5))
+    figure.canvas.manager.set_window_title("ShapeIt — Démonstration")
+    graphe_ax = figure.add_axes([0.04, 0.23, 0.60, 0.65])
+    info_ax = figure.add_axes([0.66, 0.22, 0.31, 0.65])
+    precedent_ax = figure.add_axes([0.31, 0.055, 0.15, 0.065])
+    suivant_ax = figure.add_axes([0.54, 0.055, 0.15, 0.065])
+    bouton_precedent = Button(precedent_ax, "Précédent")
+    bouton_suivant = Button(suivant_ax, "Suivant")
+    etat = {"index": 0}
 
-    print("\nPoids par défaut :")
+    def afficher():
+        index = etat["index"]
+        item = pages[index]
+        graphe_ax.clear()
+        info_ax.clear()
+        draw_graph(
+            item["graphe"],
+            ax=graphe_ax,
+            show=False,
+            **item["options"],
+        )
 
-    g4.add_edge("D", "E")
+        info_ax.set_xlim(0, 1)
+        info_ax.set_ylim(0, 1)
+        info_ax.axis("off")
+        info_ax.text(
+            0, 0.99,
+            f"SPRINT {item['sprint']}",
+            fontsize=11,
+            fontweight="bold",
+            color="#2563eb",
+            va="top",
+        )
+        info_ax.text(
+            0, 0.93, item["titre"],
+            fontsize=13, fontweight="bold",
+            va="top", wrap=True,
+        )
+        y = 0.81
+        for resultat in item["resultats"]:
+            morceaux = textwrap.wrap(
+                str(resultat), width=38,
+                break_long_words=False,
+                break_on_hyphens=False,
+            ) or [""]
+            for morceau in morceaux:
+                info_ax.text(0, y, morceau, fontsize=9.5, va="top")
+                y -= 0.041
+            y -= 0.025
 
-    print("Poids D-E :", g4.get_edge_weight("D", "E"))
+        figure.suptitle(
+            f"ShapeIt — Démonstration interactive   •   {index + 1} / {len(pages)}",
+            fontsize=15, fontweight="bold", y=0.97,
+        )
+        bouton_precedent.label.set_color(
+            "#555555" if index > 0 else "#aaaaaa"
+        )
+        bouton_suivant.label.set_color(
+            "#555555" if index < len(pages) - 1 else "#aaaaaa"
+        )
+        figure.canvas.draw_idle()
 
-    print("\n=======================================================")
-    print("2. PLUS COURT CHEMIN - DIJKSTRA")
-    print("=======================================================")
+    def precedent(_event):
+        if etat["index"] > 0:
+            etat["index"] -= 1
+            afficher()
 
-    path, distance = g4.shortest_path("A", "D")
+    def suivant(_event):
+        if etat["index"] < len(pages) - 1:
+            etat["index"] += 1
+            afficher()
 
-    print("Chemin le plus court de A à D :", path)
-    print("Distance totale :", distance)
+    bouton_precedent.on_clicked(precedent)
+    bouton_suivant.on_clicked(suivant)
+    afficher()
+    plt.show()
 
-    print("\n=======================================================")
-    print("3. GRAPHE ORIENTÉ")
-    print("=======================================================")
 
-    directed_graph = Graph(directed=True)
-
-    directed_graph.add_edge("A", "B", 2)
-    directed_graph.add_edge("B", "C", 3)
-
-    path, distance = directed_graph.shortest_path("A", "C")
-
-    print("Chemin A -> C :", path)
-    print("Distance :", distance)
-
-    print("\n=======================================================")
-    print("4. CAS PARTICULIER : MÊME SOMMET")
-    print("=======================================================")
-
-    path, distance = g4.shortest_path("A", "A")
-
-    print("Chemin A -> A :", path)
-    print("Distance :", distance)
+def main():
+    pages = construire_pages()
+    print(f"{len(pages)} démonstrations disponibles dans la fenêtre ShapeIt.")
+    print("Utilise les boutons Précédent et Suivant pour changer de vue.")
+    lancer_diaporama(pages)
 
 
 if __name__ == "__main__":
