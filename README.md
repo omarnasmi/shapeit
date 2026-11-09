@@ -13,6 +13,7 @@ Les fonctionnalités suivantes sont implémentées et testées :
 - Recherche de voisins et vérification de l'existence d'une arête
 - Calcul du degré d'un nœud
 - Génération de la matrice d'adjacence
+- Coloration gloutonne des sommets (`graph_coloring`)
 - Visualisation avec Matplotlib (`draw_graph`) pour les graphes non orientés
 
 ## Installation

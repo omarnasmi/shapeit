@@ -742,6 +742,60 @@ class Graph:
     # Dunder helpers
     # ------------------------------------------------------------------
 
+    def graph_coloring(
+        self,
+    ) -> dict[object, int]:
+        """Color the vertices of the graph using a greedy algorithm.
+
+        Assigns a non-negative integer color (``0, 1, 2, ...``) to each
+        vertex such that no two adjacent vertices share the same color.
+        Vertices are visited in insertion order and each vertex receives
+        the smallest color not already used by its neighbours.
+
+        Self-loops are ignored. For directed graphs, edge direction is
+        ignored so that any two connected vertices receive distinct
+        colors.
+
+        Limitations:
+            - Being a greedy heuristic, this algorithm does not
+              guarantee the chromatic number (minimum number of colors),
+              although it uses at most ``Δ(G) + 1`` colors.
+            - The resulting coloring depends on the order in which
+              vertices are visited.
+
+        Returns:
+            A dictionary ``{node: color}`` mapping every vertex to its
+            integer color index (starting at ``0``). Returns ``{}`` for
+            an empty graph.
+        """
+        connections: dict[object, set[object]] = {
+            node: set()
+            for node in self.adjacency
+        }
+
+        for source, neighbors in self.adjacency.items():
+            for target in neighbors:
+                if source != target:
+                    connections[source].add(target)
+                    connections[target].add(source)
+
+        colors: dict[object, int] = {}
+
+        for node in self.adjacency:
+            used_colors = {
+                colors[neighbor]
+                for neighbor in connections[node]
+                if neighbor in colors
+            }
+
+            color = 0
+            while color in used_colors:
+                color += 1
+
+            colors[node] = color
+
+        return colors
+
     def __str__(self) -> str:
         """Return a readable representation of the graph."""
         return str(

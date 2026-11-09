@@ -404,3 +404,81 @@ def test_shortest_path_negative_weight():
         assert False
     except ValueError:
         pass
+
+
+def test_graph_coloring_empty_graph():
+    """Coloring an empty graph returns an empty dictionary."""
+    g = Graph()
+
+    assert g.graph_coloring() == {}
+
+
+def test_graph_coloring_isolated_nodes():
+    """Isolated vertices receive color 0."""
+    g = Graph()
+    g.add_node("A")
+    g.add_node("B")
+    g.add_node("C")
+
+    assert g.graph_coloring() == {"A": 0, "B": 0, "C": 0}
+
+
+def test_graph_coloring_bipartite_path():
+    """A path graph is 2-colored by the greedy algorithm."""
+    g = Graph()
+    g.add_edge("A", "B")
+    g.add_edge("B", "C")
+    g.add_edge("C", "D")
+
+    colors = g.graph_coloring()
+
+    assert set(colors.keys()) == {"A", "B", "C", "D"}
+    assert len(set(colors.values())) == 2
+    for u, v in g.edges():
+        assert colors[u] != colors[v]
+
+
+def test_graph_coloring_triangle_and_complete():
+    """A complete graph K_n assigns n distinct colors."""
+    g = Graph()
+    g.add_edge("A", "B")
+    g.add_edge("B", "C")
+    g.add_edge("C", "A")
+
+    colors = g.graph_coloring()
+
+    assert set(colors.keys()) == {"A", "B", "C"}
+    assert len(set(colors.values())) == 3
+    for u, v in g.edges():
+        assert colors[u] != colors[v]
+
+
+def test_graph_coloring_disconnected_graph():
+    """Disconnected components and isolated vertices are properly colored."""
+    g = Graph()
+    g.add_edge("A", "B")
+    g.add_edge("B", "C")
+    g.add_edge("C", "A")
+    g.add_edge("D", "E")
+    g.add_node("F")
+
+    colors = g.graph_coloring()
+
+    assert set(colors.keys()) == {"A", "B", "C", "D", "E", "F"}
+    assert colors["F"] == 0
+    for u, v in g.edges():
+        assert colors[u] != colors[v]
+
+
+def test_graph_coloring_self_loop_and_directed():
+    """Self-loops are ignored and directed edges still separate colors."""
+    g = Graph(directed=True)
+    g.add_edge("A", "A")
+    g.add_edge("A", "B")
+    g.add_edge("C", "B")
+
+    colors = g.graph_coloring()
+
+    assert set(colors.keys()) == {"A", "B", "C"}
+    assert colors["A"] != colors["B"]
+    assert colors["C"] != colors["B"]

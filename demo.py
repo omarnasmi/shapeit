@@ -277,6 +277,39 @@ def construire_pages():
         show_weights=True,
     ))
 
+    coloration_graphe = Graph()
+    coloration_graphe.add_edge("A", "B")
+    coloration_graphe.add_edge("B", "C")
+    coloration_graphe.add_edge("C", "A")
+    coloration_graphe.add_edge("C", "D")
+    coloration_graphe.add_edge("E", "F")
+    coloration_graphe.add_node("G")
+    couleurs = coloration_graphe.graph_coloring()
+    palette = [
+        "tab:blue",
+        "tab:orange",
+        "tab:green",
+        "tab:red",
+        "tab:purple",
+        "tab:brown",
+    ]
+    couleurs_visuelles = {
+        sommet: palette[indice % len(palette)]
+        for sommet, indice in couleurs.items()
+    }
+    nb_couleurs = len(set(couleurs.values()))
+    pages.append(page(
+        3, "Coloration gloutonne des sommets", coloration_graphe,
+        [
+            f"Coloration : {couleurs}",
+            f"Nombre de couleurs utilisées : {nb_couleurs}",
+            "Deux sommets adjacents ont toujours des couleurs différentes.",
+            "Composante séparée (E–F) et sommet isolé (G) pris en charge.",
+        ],
+        layout="spring",
+        node_color=couleurs_visuelles,
+    ))
+
     return pages
 
 
